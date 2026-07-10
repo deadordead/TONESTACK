@@ -434,6 +434,14 @@
   .prog-chordname{font-family:var(--font-display); font-weight:700; font-size:17px; margin-bottom:8px;}
   .prog-diagram{overflow:visible; padding:0;}
   .prog-diagram svg{width:100%; height:auto; display:block;}
+  .prog-title{margin:0 0 12px; font-size:16px;}
+  .prog-settings-row{display:flex; align-items:flex-end; gap:22px; margin-bottom:16px; flex-wrap:wrap;}
+  .prog-tempo{display:flex; flex-direction:column; gap:6px; flex:1 1 140px; min-width:140px;}
+  .prog-tempo-control{display:flex; align-items:center; gap:10px;}
+  .prog-tempo-control input[type=range]{flex:1;}
+  .prog-bpm-value{font-family:var(--font-mono); font-weight:700; font-size:15px; min-width:2.4em; text-align:right;}
+  .loop-toggle{width:auto; gap:8px;}
+  .loop-toggle .wake-toggle-title{font-size:13px;}
 
   /* ---------- Journal ---------- */
   .journal-entry{
@@ -610,9 +618,26 @@
         <p class="stage-sub">Choisis une tonalité et un style — les progressions sont de vraies trames idiomatiques, pas des accords tirés au hasard.</p>
       </div>
       <div class="card sticky-top">
-        <div class="row" style="justify-content:space-between; margin-bottom:16px;">
-          <h3 id="progName" style="margin:0;">Pop</h3>
-          <button class="btn primary" id="progPlay">Jouer la progression</button>
+        <h3 id="progName" class="prog-title">Pop</h3>
+        <button class="btn primary" id="progPlay" style="width:100%; margin-bottom:14px;">Jouer la progression</button>
+        <div class="prog-settings-row">
+          <div class="prog-tempo">
+            <label>Tempo</label>
+            <div class="prog-tempo-control">
+              <input type="range" id="progBpmSlider" min="40" max="200" value="90">
+              <span class="prog-bpm-value" id="progBpmValue">90</span>
+            </div>
+          </div>
+          <label class="wake-toggle loop-toggle" for="progClick">
+            <span class="wake-toggle-title">Clic</span>
+            <input type="checkbox" id="progClick">
+            <span class="wake-switch"></span>
+          </label>
+          <label class="wake-toggle loop-toggle" for="progLoop">
+            <span class="wake-toggle-title">Boucle</span>
+            <input type="checkbox" id="progLoop">
+            <span class="wake-switch"></span>
+          </label>
         </div>
         <div class="progression-row" id="progRow"></div>
       </div>
@@ -849,6 +874,17 @@ function playTone(freq, duration, delay, gain){
 }
 function midiToFreq(m){ return 440 * Math.pow(2, (m-69)/12); }
 const STRING_MIDI = [40,45,50,55,59,64]; // low E to high e, standard tuning
+function playClick(delay, accent){
+  const ctx = getCtx();
+  const t0 = ctx.currentTime + delay;
+  const osc = ctx.createOscillator();
+  const g = ctx.createGain();
+  osc.frequency.value = accent ? 1400 : 900;
+  g.gain.setValueAtTime(accent ? 0.26 : 0.14, t0);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.06);
+  osc.connect(g); g.connect(ctx.destination);
+  osc.start(t0); osc.stop(t0 + 0.07);
+}
 
 /* ============================================================
    TUNER
@@ -1435,8 +1471,20 @@ const STRING_MIDI = [40,45,50,55,59,64]; // low E to high e, standard tuning
   const nameEl = document.getElementById('progName');
   const rowEl = document.getElementById('progRow');
   const playBtn = document.getElementById('progPlay');
+  const loopToggle = document.getElementById('progLoop');
+  const clickToggle = document.getElementById('progClick');
+  const bpmSlider = document.getElementById('progBpmSlider');
+  const bpmValue = document.getElementById('progBpmValue');
 
   let chosenRoot = 'C', chosenMode = 'major', chosenStyleIdx = 0;
+  let progPlayToken = 0, progIsPlaying = false;
+  let progBpm = 90;
+  const BEATS_PER_CHORD = 4;
+
+  bpmSlider.addEventListener('input', function(){
+    progBpm = parseInt(bpmSlider.value, 10);
+    bpmValue.textContent = progBpm;
+  });
 
   NOTES.forEach(function(n){
     const c = document.createElement('button');
@@ -1498,6 +1546,47 @@ const STRING_MIDI = [40,45,50,55,59,64]; // low E to high e, standard tuning
     });
   }
 
+  function stopPlayback(){
+    progPlayToken++;
+    progIsPlaying = false;
+    playBtn.textContent = 'Jouer la progression';
+  }
+
+  function playPass(chords){
+    const chordDuration = (60 / progBpm) * BEATS_PER_CHORD;
+    chords.forEach(function(ch, i){
+      if(!ch.variant) return;
+      ch.variant.frets.forEach(function(f, stringIdx){
+        if(f === -1) return;
+        const freq = midiToFreq(STRING_MIDI[stringIdx] + f);
+        const strumOffset = stringIdx * 0.014;
+        playTone(freq, chordDuration*0.92, i*chordDuration + strumOffset, 0.10);
+      });
+      if(clickToggle.checked){
+        for(let b=0; b<BEATS_PER_CHORD; b++){
+          const beatDelay = i*chordDuration + b*(chordDuration/BEATS_PER_CHORD);
+          playClick(beatDelay, b===0);
+        }
+      }
+    });
+    return chords.length * chordDuration;
+  }
+
+  function schedulePlayback(){
+    const myToken = progPlayToken;
+    getCtx();
+    const duration = playPass(currentChords());
+    setTimeout(function(){
+      if(progPlayToken !== myToken) return; // stopped or changed since
+      if(loopToggle.checked){
+        schedulePlayback();
+      }else{
+        progIsPlaying = false;
+        playBtn.textContent = 'Jouer la progression';
+      }
+    }, duration*1000);
+  }
+
   function refresh(){
     const preset = PRESETS[chosenMode][chosenStyleIdx];
     nameEl.textContent = preset.name;
@@ -1513,21 +1602,17 @@ const STRING_MIDI = [40,45,50,55,59,64]; // low E to high e, standard tuning
         window.ChordEngine.renderChordDiagram(diagContainer, ch.variant.frets, ch.variant.barre, ch.rootIdx, 'notes');
       }
     });
+    if(progIsPlaying) stopPlayback();
   }
 
   playBtn.addEventListener('click', function(){
-    const chords = currentChords();
-    const chordDuration = 1.3;
-    getCtx();
-    chords.forEach(function(ch, i){
-      if(!ch.variant) return;
-      ch.variant.frets.forEach(function(f, stringIdx){
-        if(f === -1) return;
-        const freq = midiToFreq(STRING_MIDI[stringIdx] + f);
-        const strumOffset = stringIdx * 0.014;
-        playTone(freq, chordDuration*0.92, i*chordDuration + strumOffset, 0.10);
-      });
-    });
+    if(progIsPlaying){
+      stopPlayback();
+    }else{
+      progIsPlaying = true;
+      playBtn.textContent = 'Arrêter';
+      schedulePlayback();
+    }
   });
 
   refresh();
