@@ -202,7 +202,6 @@
   .peg[data-tab="metronome"]{--accent:#C0402C;}
   .peg[data-tab="chords"]{--accent:#4C7A52;}
   .peg[data-tab="scales"]{--accent:#C99A2E;}
-  .peg[data-tab="fiches"]{--accent:#3D6B7A;}
   .peg[data-tab="progressions"]{--accent:#7A4A63;}
   .peg[data-tab="ear"]{--accent:#B5652E;}
   .peg[data-tab="journal"]{--accent:#4A4842;}
@@ -296,7 +295,6 @@
   #panel-metronome{--accent:#C0402C;}
   #panel-chords{--accent:#4C7A52;}
   #panel-scales{--accent:#C99A2E;}
-  #panel-fiches{--accent:#3D6B7A;}
   #panel-progressions{--accent:#7A4A63;}
   #panel-ear{--accent:#B5652E;}
   #panel-journal{--accent:#4A4842;}
@@ -441,6 +439,10 @@
   .prog-token.playing .roman{color:rgba(250,248,244,0.75);}
   .prog-token.playing .name{color:#FAF8F4;}
   .prog-focus{border-top:1px solid var(--line); padding-top:16px;}
+  .prog-suggestion{border-top:1px solid var(--line); margin-top:16px; padding-top:14px; display:flex; flex-direction:column; gap:10px;}
+  .prog-suggestion-row{display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;}
+  .prog-suggestion-label{font-family:var(--font-mono); font-size:10.5px; text-transform:uppercase; letter-spacing:0.06em; color:var(--ink-dim);}
+  .prog-suggestion-value{font-weight:600; font-size:14px; margin-top:2px;}
 
   /* ---------- Shared chord-position stepper (Accords + Progressions) ---------- */
   .chord-title-row{display:flex; align-items:center; gap:12px;}
@@ -475,6 +477,19 @@
   .prog-focus-name{font-family:var(--font-display); font-weight:700; font-size:19px;}
   .prog-diagram{overflow:visible; padding:0;}
   #chordDiagram svg, .prog-diagram svg{width:100%; height:auto; display:block; max-width:280px; margin:0 auto;}
+  .identify-match{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:12px 14px;
+    border:1px solid var(--aluminum);
+    border-radius:4px;
+    background:var(--panel-2);
+    margin-bottom:8px;
+    cursor:pointer;
+  }
+  .identify-match:hover{border-color:var(--accent, var(--ink));}
+  .identify-match-name{font-weight:600; font-size:14.5px;}
+  .identify-match-hint{font-family:var(--font-mono); font-size:11px; color:var(--ink-dim);}
+  .identify-match-arrow{color:var(--ink-dim); font-size:16px;}
   .prog-title{margin:0 0 12px; font-size:16px;}
   .prog-settings-row{display:flex; align-items:flex-end; gap:22px; margin-bottom:16px; flex-wrap:wrap;}
   .prog-tempo{display:flex; flex-direction:column; gap:6px; flex:1 1 140px; min-width:140px;}
@@ -488,32 +503,6 @@
     .prog-settings-row > *{flex:none !important; width:100%; min-width:0 !important;}
     .prog-settings-row select{width:100%;}
   }
-
-  /* ---------- Fiches ---------- */
-  .fiche-title{font-family:var(--font-display); font-weight:700; font-size:20px; margin:0 0 14px;}
-  .fiche-body p{font-size:14.5px; line-height:1.6; color:var(--ink); margin:0 0 14px;}
-  .fiche-formula{
-    display:grid; grid-template-columns:auto 1fr; gap:6px 14px;
-    background:var(--panel-2);
-    border:1px solid var(--line);
-    border-radius:4px;
-    padding:14px 16px;
-    margin:0 0 16px;
-    font-family:var(--font-mono);
-    font-size:13px;
-  }
-  .fiche-formula .num{color:var(--accent, var(--ink-dim)); font-weight:700; text-align:right;}
-  .fiche-exercise{
-    border-left:3px solid var(--accent, var(--aluminum));
-    background:var(--panel-2);
-    border-radius:0 4px 4px 0;
-    padding:12px 16px;
-  }
-  .fiche-exercise-label{
-    font-family:var(--font-mono); font-size:11px; text-transform:uppercase; letter-spacing:0.08em;
-    color:var(--accent, var(--ink-dim)); margin-bottom:6px; font-weight:600;
-  }
-  .fiche-exercise p{margin:0; font-size:14px; line-height:1.55;}
 
   /* ---------- Idées (audio recorder) ---------- */
   .rec-row{display:flex; align-items:center; gap:16px; margin-bottom:6px;}
@@ -573,7 +562,6 @@
     <button class="peg" data-tab="metronome"><span class="peg-knob"></span>Métronome</button>
     <button class="peg" data-tab="chords"><span class="peg-knob"></span>Accords</button>
     <button class="peg" data-tab="scales"><span class="peg-knob"></span>Gammes</button>
-    <button class="peg" data-tab="fiches"><span class="peg-knob"></span>Fiches</button>
     <button class="peg" data-tab="progressions"><span class="peg-knob"></span>Progressions</button>
     <button class="peg" data-tab="ear"><span class="peg-knob"></span>Oreille</button>
     <button class="peg" data-tab="journal"><span class="peg-knob"></span>Journal</button>
@@ -656,33 +644,55 @@
       <div class="stage-header">
         <p class="stage-eyebrow">03 / Vocabulaire</p>
         <h1 class="stage-title">Accords</h1>
-        <p class="stage-sub">Choisis une fondamentale, une qualité, puis une position si plusieurs sont disponibles (ouverte, barré forme Mi, barré forme La).</p>
+        <p class="stage-sub" id="chordsSub">Choisis une fondamentale, une qualité, puis une position si plusieurs sont disponibles (ouverte, barré forme Mi, barré forme La).</p>
       </div>
-      <div class="card sticky-top">
-        <div class="row" style="justify-content:space-between; margin-bottom:4px;">
-          <div class="chord-title-row">
-            <button class="stepper-btn" id="chordPosPrev" type="button" aria-label="Position précédente">‹</button>
-            <div class="chord-title-block">
-              <h3 id="chordName">C majeur</h3>
-              <span class="chord-pos-label" id="chordPosLabel">Ouverte</span>
+      <div class="chip-group" id="chordToolMode" style="margin-bottom:16px;">
+        <button class="chip active" data-mode="build">Construire</button>
+        <button class="chip" data-mode="identify">Identifier</button>
+      </div>
+
+      <!-- ---- BUILD MODE ---- -->
+      <div id="chordBuildMode">
+        <div class="card sticky-top">
+          <div class="row" style="justify-content:space-between; margin-bottom:4px;">
+            <div class="chord-title-row">
+              <button class="stepper-btn" id="chordPosPrev" type="button" aria-label="Position précédente">‹</button>
+              <div class="chord-title-block">
+                <h3 id="chordName">C majeur</h3>
+                <span class="chord-pos-label" id="chordPosLabel">Ouverte</span>
+              </div>
+              <button class="stepper-btn" id="chordPosNext" type="button" aria-label="Position suivante">›</button>
             </div>
-            <button class="stepper-btn" id="chordPosNext" type="button" aria-label="Position suivante">›</button>
+            <div class="chip-group" id="chordLabelMode">
+              <button class="chip" data-mode="degrees">Degrés</button>
+              <button class="chip" data-mode="notes">Notes</button>
+            </div>
           </div>
-          <div class="chip-group" id="chordLabelMode">
-            <button class="chip" data-mode="degrees">Degrés</button>
-            <button class="chip" data-mode="notes">Notes</button>
+          <div class="fretboard-wrap" id="chordDiagram"></div>
+        </div>
+        <div class="card">
+          <div class="stack" style="margin-bottom:14px;">
+            <label>Fondamentale</label>
+            <div class="chip-group" id="chordRoots"></div>
+          </div>
+          <div class="stack">
+            <label>Qualité</label>
+            <div class="chip-group" id="chordQualities"></div>
           </div>
         </div>
-        <div class="fretboard-wrap" id="chordDiagram"></div>
       </div>
-      <div class="card">
-        <div class="stack" style="margin-bottom:14px;">
-          <label>Fondamentale</label>
-          <div class="chip-group" id="chordRoots"></div>
+
+      <!-- ---- IDENTIFY MODE ---- -->
+      <div id="chordIdentifyMode" style="display:none;">
+        <div class="card sticky-top">
+          <h3 class="prog-title" id="identifyTitle">Sélectionne des notes</h3>
+          <div id="identifyResults"></div>
         </div>
-        <div class="stack">
-          <label>Qualité</label>
-          <div class="chip-group" id="chordQualities"></div>
+        <div class="card">
+          <div class="stack">
+            <label>Notes de l'accord</label>
+            <div class="chip-group" id="identifyNotes"></div>
+          </div>
         </div>
       </div>
     </section>
@@ -711,25 +721,7 @@
         </div>
         <div class="stack">
           <label>Gamme</label>
-          <div class="chip-group" id="scaleTypes"></div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ===================== FICHES ===================== -->
-    <section class="panel" id="panel-fiches">
-      <div class="stage-header">
-        <p class="stage-eyebrow">05 / Repères</p>
-        <h1 class="stage-title">Fiches</h1>
-        <p class="stage-sub">La théorie derrière les autres onglets, en petites doses, avec de quoi vérifier à la guitare.</p>
-      </div>
-      <div class="card sticky-top">
-        <div id="ficheContent"></div>
-      </div>
-      <div class="card">
-        <div class="stack">
-          <label>Sujet</label>
-          <select id="ficheTopics"></select>
+          <select id="scaleTypes"></select>
         </div>
       </div>
     </section>
@@ -737,7 +729,7 @@
     <!-- ===================== PROGRESSIONS ===================== -->
     <section class="panel" id="panel-progressions">
       <div class="stage-header">
-        <p class="stage-eyebrow">06 / Trames</p>
+        <p class="stage-eyebrow">05 / Trames</p>
         <h1 class="stage-title">Progressions</h1>
         <p class="stage-sub">Choisis une tonalité et un style — les progressions sont de vraies trames idiomatiques, pas des accords tirés au hasard.</p>
       </div>
@@ -774,7 +766,25 @@
             <option value="pop">Pop / Rock</option>
             <option value="ballad">Ballade</option>
             <option value="shuffle">Shuffle</option>
+            <option value="reggae">Reggae</option>
+            <option value="funk">Funk</option>
           </select>
+        </div>
+        <div class="prog-settings-row">
+          <div class="prog-tempo">
+            <label>Volume accords</label>
+            <div class="prog-tempo-control">
+              <input type="range" id="progChordVolSlider" min="0" max="100" value="85">
+              <span class="prog-bpm-value" id="progChordVolValue">85%</span>
+            </div>
+          </div>
+          <div class="prog-tempo">
+            <label>Volume rythme</label>
+            <div class="prog-tempo-control">
+              <input type="range" id="progRhythmVolSlider" min="0" max="100" value="55">
+              <span class="prog-bpm-value" id="progRhythmVolValue">55%</span>
+            </div>
+          </div>
         </div>
         <div class="prog-chart" id="progChart"></div>
         <div class="prog-focus">
@@ -790,6 +800,22 @@
             <button class="stepper-btn" id="progPosNext" type="button" aria-label="Position suivante">›</button>
           </div>
           <div class="fretboard-wrap prog-diagram" id="progFocusDiagram"></div>
+        </div>
+        <div class="prog-suggestion">
+          <div class="prog-suggestion-row">
+            <div>
+              <div class="prog-suggestion-label">Gamme de la tonalité</div>
+              <div class="prog-suggestion-value" id="suggestGlobal">Do Majeure</div>
+            </div>
+            <button class="btn small ghost" id="suggestGlobalGo">Voir sur le manche</button>
+          </div>
+          <div class="prog-suggestion-row">
+            <div>
+              <div class="prog-suggestion-label">Sur cet accord</div>
+              <div class="prog-suggestion-value" id="suggestChord">Do Ionien</div>
+            </div>
+            <button class="btn small ghost" id="suggestChordGo">Voir sur le manche</button>
+          </div>
         </div>
       </div>
       <div class="card">
@@ -814,7 +840,7 @@
     <!-- ===================== EAR TRAINER ===================== -->
     <section class="panel" id="panel-ear">
       <div class="stage-header">
-        <p class="stage-eyebrow">07 / Oreille</p>
+        <p class="stage-eyebrow">06 / Oreille</p>
         <h1 class="stage-title" id="earTitle">Reconnaissance d'intervalles</h1>
         <p class="stage-sub" id="earSub">Deux notes sont jouées l'une après l'autre. Identifie l'intervalle qui les sépare.</p>
       </div>
@@ -836,7 +862,7 @@
     <!-- ===================== JOURNAL ===================== -->
     <section class="panel" id="panel-journal">
       <div class="stage-header">
-        <p class="stage-eyebrow">08 / Idées</p>
+        <p class="stage-eyebrow">07 / Idées</p>
         <h1 class="stage-title">Idées</h1>
         <p class="stage-sub">Enregistre un riff au micro, écoute-le, boucle-le. Le rognage ne supprime rien — c'est juste une fenêtre de lecture que tu peux ajuster ou retirer à tout moment.</p>
       </div>
@@ -1023,13 +1049,14 @@ function addSwipeHandler(el, onSwipeLeft, onSwipeRight){
     }
   }, {passive:true});
 }
-function playClick(delay, accent){
+function playClick(delay, accent, volMult){
+  volMult = volMult===undefined ? 1 : volMult;
   const ctx = getCtx();
   const t0 = ctx.currentTime + delay;
   const osc = ctx.createOscillator();
   const g = ctx.createGain();
   osc.frequency.value = accent ? 1400 : 900;
-  g.gain.setValueAtTime(accent ? 0.26 : 0.14, t0);
+  g.gain.setValueAtTime((accent ? 0.26 : 0.14) * volMult, t0);
   g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.06);
   osc.connect(g); g.connect(ctx.destination);
   osc.start(t0); osc.stop(t0 + 0.07);
@@ -1048,8 +1075,9 @@ function getNoiseBuffer(){
   noiseBufferCache = buf;
   return buf;
 }
-function playKick(delay, velocity){
+function playKick(delay, velocity, volMult){
   velocity = velocity || 1;
+  volMult = volMult===undefined ? 1 : volMult;
   const ctx = getCtx();
   const t0 = ctx.currentTime + delay;
   const osc = ctx.createOscillator();
@@ -1057,14 +1085,15 @@ function playKick(delay, velocity){
   osc.type = 'sine';
   osc.frequency.setValueAtTime(150, t0);
   osc.frequency.exponentialRampToValueAtTime(46, t0 + 0.09);
-  g.gain.setValueAtTime(0.9 * velocity, t0);
+  g.gain.setValueAtTime(0.9 * velocity * volMult, t0);
   g.gain.exponentialRampToValueAtTime(0.001, t0 + 0.22);
   osc.connect(g); g.connect(ctx.destination);
   osc.start(t0); osc.stop(t0 + 0.24);
   return [{source:osc, gain:g}];
 }
-function playSnare(delay, velocity){
+function playSnare(delay, velocity, volMult){
   velocity = velocity || 1;
+  volMult = volMult===undefined ? 1 : volMult;
   const ctx = getCtx();
   const t0 = ctx.currentTime + delay;
   const noise = ctx.createBufferSource();
@@ -1072,21 +1101,22 @@ function playSnare(delay, velocity){
   const hp = ctx.createBiquadFilter();
   hp.type = 'highpass'; hp.frequency.value = 1500;
   const ng = ctx.createGain();
-  ng.gain.setValueAtTime(0.5 * velocity, t0);
+  ng.gain.setValueAtTime(0.5 * velocity * volMult, t0);
   ng.gain.exponentialRampToValueAtTime(0.001, t0 + 0.15);
   noise.connect(hp); hp.connect(ng); ng.connect(ctx.destination);
   noise.start(t0); noise.stop(t0 + 0.16);
   const osc = ctx.createOscillator();
   const og = ctx.createGain();
   osc.type = 'triangle'; osc.frequency.value = 190;
-  og.gain.setValueAtTime(0.3 * velocity, t0);
+  og.gain.setValueAtTime(0.3 * velocity * volMult, t0);
   og.gain.exponentialRampToValueAtTime(0.001, t0 + 0.1);
   osc.connect(og); og.connect(ctx.destination);
   osc.start(t0); osc.stop(t0 + 0.11);
   return [{source:noise, gain:ng}, {source:osc, gain:og}];
 }
-function playHihat(delay, velocity, open){
+function playHihat(delay, velocity, open, volMult){
   velocity = velocity || 1;
+  volMult = volMult===undefined ? 1 : volMult;
   const ctx = getCtx();
   const t0 = ctx.currentTime + delay;
   const src = ctx.createBufferSource();
@@ -1095,7 +1125,7 @@ function playHihat(delay, velocity, open){
   hp.type = 'highpass'; hp.frequency.value = 7000;
   const g = ctx.createGain();
   const dur = open ? 0.22 : 0.045;
-  g.gain.setValueAtTime(0.22 * velocity, t0);
+  g.gain.setValueAtTime(0.22 * velocity * volMult, t0);
   g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
   src.connect(hp); hp.connect(g); g.connect(ctx.destination);
   src.start(t0); src.stop(t0 + dur + 0.02);
@@ -1124,20 +1154,33 @@ const RHYTHM_STYLES = {
     {step:3, inst:'snare'}, {step:9, inst:'snare'},
     {step:0, inst:'hihat'}, {step:2, inst:'hihat'}, {step:3, inst:'hihat'}, {step:5, inst:'hihat'},
     {step:6, inst:'hihat'}, {step:8, inst:'hihat'}, {step:9, inst:'hihat'}, {step:11, inst:'hihat'}
+  ]},
+  reggae: { subdivisions:16, hits:[
+    {step:8, inst:'kick'}, {step:8, inst:'snare'}, // one-drop on beat 3
+    {step:2, inst:'hihat'}, {step:6, inst:'hihat'}, {step:10, inst:'hihat'}, {step:14, inst:'hihat'} // off-beats only
+  ]},
+  funk: { subdivisions:16, hits:[
+    {step:0, inst:'kick'}, {step:3, inst:'kick', velocity:0.7}, {step:8, inst:'kick'}, {step:11, inst:'kick', velocity:0.6},
+    {step:4, inst:'snare'}, {step:12, inst:'snare'},
+    {step:0, inst:'hihat'}, {step:1, inst:'hihat', velocity:0.5}, {step:2, inst:'hihat'}, {step:3, inst:'hihat', velocity:0.5},
+    {step:4, inst:'hihat'}, {step:5, inst:'hihat', velocity:0.5}, {step:6, inst:'hihat'}, {step:7, inst:'hihat', velocity:0.5},
+    {step:8, inst:'hihat'}, {step:9, inst:'hihat', velocity:0.5}, {step:10, inst:'hihat'}, {step:11, inst:'hihat', velocity:0.5},
+    {step:12, inst:'hihat'}, {step:13, inst:'hihat', velocity:0.5}, {step:14, inst:'hihat'}, {step:15, inst:'hihat', velocity:0.5}
   ]}
 };
-function playRhythmStyle(styleKey, barStart, barDuration, registry){
+function playRhythmStyle(styleKey, barStart, barDuration, registry, volMult){
   const style = RHYTHM_STYLES[styleKey];
   if(!style) return;
+  volMult = volMult===undefined ? 1 : volMult;
   const stepDur = barDuration / style.subdivisions;
   style.hits.forEach(function(h){
     const delay = barStart + h.step * stepDur;
     const v = h.velocity !== undefined ? h.velocity : 1;
     let handles = null;
-    if(h.inst === 'click') handles = playClick(delay, !!h.accent);
-    else if(h.inst === 'kick') handles = playKick(delay, v);
-    else if(h.inst === 'snare') handles = playSnare(delay, v);
-    else if(h.inst === 'hihat') handles = playHihat(delay, v, !!h.open);
+    if(h.inst === 'click') handles = playClick(delay, !!h.accent, volMult);
+    else if(h.inst === 'kick') handles = playKick(delay, v, volMult);
+    else if(h.inst === 'snare') handles = playSnare(delay, v, volMult);
+    else if(h.inst === 'hihat') handles = playHihat(delay, v, !!h.open, volMult);
     if(registry && handles) registry.push.apply(registry, handles);
   });
 }
@@ -1610,6 +1653,131 @@ function silenceNodes(handles){
   }
   refresh();
 
+  /* ---- Build / Identify mode toggle ---- */
+  const modeToggleEl = document.getElementById('chordToolMode');
+  const buildModeEl = document.getElementById('chordBuildMode');
+  const identifyModeEl = document.getElementById('chordIdentifyMode');
+  const subEl = document.getElementById('chordsSub');
+  const BUILD_SUB = "Choisis une fondamentale, une qualité, puis une position si plusieurs sont disponibles (ouverte, barré forme Mi, barré forme La).";
+  const IDENTIFY_SUB = "Coche les notes que tu entends ou que tu as trouvées — l'appli essaie chaque note comme fondamentale possible.";
+
+  function showBuildMode(){
+    modeToggleEl.querySelectorAll('.chip').forEach(x=>x.classList.toggle('active', x.dataset.mode==='build'));
+    buildModeEl.style.display = '';
+    identifyModeEl.style.display = 'none';
+    subEl.textContent = BUILD_SUB;
+  }
+
+  modeToggleEl.querySelectorAll('.chip').forEach(function(c){
+    c.addEventListener('click', function(){
+      modeToggleEl.querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));
+      c.classList.add('active');
+      if(c.dataset.mode === 'build'){
+        buildModeEl.style.display = '';
+        identifyModeEl.style.display = 'none';
+        subEl.textContent = BUILD_SUB;
+      }else{
+        buildModeEl.style.display = 'none';
+        identifyModeEl.style.display = '';
+        subEl.textContent = IDENTIFY_SUB;
+      }
+    });
+  });
+
+  /* ---- Identify mode: pick notes, find matching chord names ---- */
+  const IDENTIFY_QUALITIES = [
+    ['majeur', [0,4,7]],
+    ['mineur', [0,3,7]],
+    ['diminué', [0,3,6]],
+    ['augmenté', [0,4,8]],
+    ['sus2', [0,2,7]],
+    ['sus4', [0,5,7]],
+    ['7 (dominante)', [0,4,7,10]],
+    ['maj7', [0,4,7,11]],
+    ['m7', [0,3,7,10]],
+    ['m7b5', [0,3,6,10]],
+    ['dim7', [0,3,6,9]],
+    ['6', [0,4,7,9]],
+    ['m6', [0,3,7,9]]
+  ];
+  // maps an identified quality to the ChordEngine key, when a buildable shape exists
+  const IDENTIFY_TO_ENGINE_KEY = {
+    'majeur':'maj', 'mineur':'min', '7 (dominante)':'7', 'maj7':'maj7', 'm7':'m7',
+    'sus2':'sus2', 'sus4':'sus4', '6':'6', 'm6':'m6'
+  };
+
+  const identifyNotesEl = document.getElementById('identifyNotes');
+  const identifyResultsEl = document.getElementById('identifyResults');
+  const identifyTitleEl = document.getElementById('identifyTitle');
+  let selectedNotes = [];
+
+  NOTES.forEach(function(n, idx){
+    const c = document.createElement('button');
+    c.className = 'chip';
+    c.textContent = n;
+    c.addEventListener('click', function(){
+      const pos = selectedNotes.indexOf(idx);
+      if(pos === -1){ selectedNotes.push(idx); c.classList.add('active'); }
+      else { selectedNotes.splice(pos,1); c.classList.remove('active'); }
+      renderIdentifyResults();
+    });
+    identifyNotesEl.appendChild(c);
+  });
+
+  function identifyChord(pitchSet){
+    const results = [];
+    const size = pitchSet.length;
+    IDENTIFY_QUALITIES.forEach(function(q){
+      const label = q[0], offsets = q[1];
+      if(offsets.length !== size) return;
+      pitchSet.forEach(function(root){
+        const expected = offsets.map(o=>(root+o)%12).slice().sort((a,b)=>a-b);
+        const actual = pitchSet.slice().sort((a,b)=>a-b);
+        if(expected.length===actual.length && expected.every((v,i)=>v===actual[i])){
+          results.push({root:root, quality:label});
+        }
+      });
+    });
+    return results;
+  }
+
+  function renderIdentifyResults(){
+    if(selectedNotes.length === 0){
+      identifyTitleEl.textContent = 'Sélectionne des notes';
+      identifyResultsEl.innerHTML = '<div class="empty-state">Coche au moins 2 notes ci-dessous.</div>';
+      return;
+    }
+    identifyTitleEl.textContent = selectedNotes.map(function(i){ return noteName(i); }).join(', ');
+    const matches = identifyChord(selectedNotes);
+    if(matches.length === 0){
+      identifyResultsEl.innerHTML = '<div class="empty-state">Aucun accord standard ne correspond exactement à ces notes.</div>';
+      return;
+    }
+    identifyResultsEl.innerHTML = '';
+    matches.forEach(function(m){
+      const engineKey = IDENTIFY_TO_ENGINE_KEY[m.quality];
+      const row = document.createElement('div');
+      row.className = 'identify-match';
+      row.innerHTML =
+        '<div><div class="identify-match-name">'+noteName(m.root)+' '+m.quality+'</div>'+
+        '<div class="identify-match-hint">'+(engineKey ? 'Voir le diagramme' : 'Pas de diagramme disponible')+'</div></div>'+
+        '<span class="identify-match-arrow">'+(engineKey ? '→' : '')+'</span>';
+      if(engineKey){
+        row.addEventListener('click', function(){
+          chosenRoot = noteName(m.root);
+          chosenQuality = engineKey;
+          chosenPosition = 0;
+          document.querySelectorAll('#chordRoots .chip').forEach(function(x){ x.classList.toggle('active', x.textContent===chosenRoot); });
+          document.querySelectorAll('#chordQualities .chip').forEach(function(x){ x.classList.toggle('active', x.textContent===QUALITY_LABEL[chosenQuality]); });
+          refresh();
+          showBuildMode();
+        });
+      }
+      identifyResultsEl.appendChild(row);
+    });
+  }
+  renderIdentifyResults();
+
   window.ChordEngine = { buildChordVariants, renderChordDiagram, QUALITY_LABEL };
 })();
 
@@ -1619,12 +1787,15 @@ function silenceNodes(handles){
 (function(){
   const SCALES = {
     'Majeure':[0,2,4,5,7,9,11],
+    'Dorien':[0,2,3,5,7,9,10],
+    'Phrygien':[0,1,3,5,7,8,10],
+    'Lydien':[0,2,4,6,7,9,11],
+    'Mixolydien':[0,2,4,5,7,9,10],
     'Mineure naturelle':[0,2,3,5,7,8,10],
+    'Locrien':[0,1,3,5,6,8,10],
     'Pentatonique majeure':[0,2,4,7,9],
     'Pentatonique mineure':[0,3,5,7,10],
-    'Blues':[0,3,5,6,7,10],
-    'Dorien':[0,2,3,5,7,9,10],
-    'Mixolydien':[0,2,4,5,7,9,10]
+    'Blues':[0,3,5,6,7,10]
   };
   const rootsEl = document.getElementById('scaleRoots');
   const typesEl = document.getElementById('scaleTypes');
@@ -1646,16 +1817,15 @@ function silenceNodes(handles){
     rootsEl.appendChild(c);
   });
   Object.keys(SCALES).forEach(function(t){
-    const c = document.createElement('button');
-    c.className = 'chip' + (t===chosenType? ' active':'');
-    c.textContent = t;
-    c.addEventListener('click', function(){
-      chosenType = t;
-      document.querySelectorAll('#scaleTypes .chip').forEach(x=>x.classList.remove('active'));
-      c.classList.add('active');
-      refresh();
-    });
-    typesEl.appendChild(c);
+    const opt = document.createElement('option');
+    opt.value = t;
+    opt.textContent = t;
+    if(t===chosenType) opt.selected = true;
+    typesEl.appendChild(opt);
+  });
+  typesEl.addEventListener('change', function(){
+    chosenType = typesEl.value;
+    refresh();
   });
 
   function renderNeck(rootIdx, intervals, labelMode){
@@ -1721,271 +1891,838 @@ function silenceNodes(handles){
     renderNeck(NOTES.indexOf(chosenRoot), SCALES[chosenType], scaleLabelMode);
   }
   refresh();
+
+  window.ScaleEngine = {
+    selectScale: function(root, type){
+      if(!SCALES[type]) return;
+      chosenRoot = root;
+      chosenType = type;
+      document.querySelectorAll('#scaleRoots .chip').forEach(function(x){ x.classList.toggle('active', x.textContent===root); });
+      document.querySelectorAll('#scaleTypes .chip').forEach(function(x){ x.classList.toggle('active', x.textContent===type); });
+      refresh();
+    }
+  };
 })();
 
 /* ============================================================
-   FICHES — short theory references tied back to the other tabs
+   PROGRESSIONS
    ============================================================ */
 (function(){
-  const FICHES = [
-    {
-      id: 'intervals',
-      title: 'Intervalles',
-      body: [
-        "Un intervalle, c'est la distance entre deux notes, comptée en demi-tons — sur le manche, une case = un demi-ton. C'est la brique de base : accords, gammes, tout se décrit avec des intervalles.",
-        "Les plus utiles à reconnaître au fil des cases, à partir d'une même corde :"
-      ],
-      formula: [
-        ['0','Fondamentale (unisson)'],
-        ['3','Tierce mineure'],
-        ['4','Tierce majeure'],
-        ['5','Quarte juste'],
-        ['7','Quinte juste'],
-        ['10','7e mineure'],
-        ['11','7e majeure'],
-        ['12','Octave']
-      ],
-      exercise: "Sur la corde de Mi grave, pose un doigt n'importe où — c'est ta fondamentale. Compte 4 cases plus loin : c'est la tierce majeure. Compte 7 cases : la quinte juste. Tu viens de placer les deux notes qui définissent un accord majeur."
-    },
-    {
-      id: 'triads',
-      title: 'Triades',
-      body: [
-        "Une triade, c'est un accord réduit à 3 notes : fondamentale, tierce, quinte. C'est la tierce qui décide si l'accord est majeur ou mineur — le reste ne change pas.",
-        "Majeur : fondamentale + tierce majeure (4 demi-tons) + encore une tierce mineure par-dessus (3 demi-tons) — la quinte tombe donc à 7 demi-tons de la fondamentale.",
-        "Mineur : même quinte (7 demi-tons), mais la tierce est mineure (3 demi-tons) au lieu de majeure. Une seule note bouge d'une case, et tout le caractère de l'accord change."
-      ],
-      formula: [
-        ['Majeur', '1 — 3 — 5'],
-        ['Mineur', '1 — b3 — 5']
-      ],
-      exercise: "Va dans Accords, affiche Do majeur en mode Degrés. Repère la note marquée « 3 ». Puis passe en Do mineur : c'est la seule note qui a bougé (d'une case vers le grave). La fondamentale et la quinte, elles, n'ont pas changé de case."
-    },
-    {
-      id: 'chord-building',
-      title: 'Construire un accord',
-      body: [
-        "Au-delà de la triade, on empile encore des tierces pour enrichir le son. Ajouter une 4e note au-dessus de la quinte donne un accord de septième — et sa couleur dépend d'un seul détail : cette 7e est-elle majeure (proche de l'octave) ou mineure (un peu plus basse) ?",
-        "C'est ce détail qui distingue un accord \"maj7\" (doux, jazzy) d'un accord \"7\" tout court (plus tendu, blues/dominant)."
-      ],
-      formula: [
-        ['maj7', '1 — 3 — 5 — 7'],
-        ['7 (dominant)', '1 — 3 — 5 — b7'],
-        ['m7', '1 — b3 — 5 — b7']
-      ],
-      exercise: "Dans Accords, compare Do majeur 7 et Do 7 l'un après l'autre. Une seule note change entre les deux — c'est elle qui porte toute la différence de couleur. Essaie de l'isoler à l'oreille avant de regarder le diagramme."
-    },
-    {
-      id: 'caged',
-      title: 'Le manche en 5 formes',
-      body: [
-        "N'importe quel accord peut se jouer avec l'une des 5 formes d'accords ouverts (Do, La, Sol, Mi, Ré — d'où le nom CAGED en anglais), déplacées le long du manche en position barrée. Ces 5 formes s'enchaînent bout à bout et couvrent tout le manche.",
-        "Ce qu'on appelle « forme Mi » ou « forme La » dans l'onglet Accords, ce sont exactement 2 de ces 5 formes."
-      ],
-      formula: null,
-      exercise: "Dans Accords, choisis Sol majeur et utilise les flèches à côté du nom pour changer de position. Les notes jouées restent les mêmes (Sol-Si-Ré), seule la forme de la main change. Essaie de repérer, à chaque position, où se trouve la fondamentale."
-    },
-    {
-      id: 'major-scale',
-      title: 'Construire une gamme majeure',
-      body: [
-        "La gamme majeure suit toujours le même schéma de tons (T, 2 cases) et demi-tons (S, 1 case) : T-T-S-T-T-T-S. Ce schéma marche depuis n'importe quelle note de départ — c'est justement ce qui la rend « majeure », peu importe la tonalité.",
-        "Depuis Do : Do (T) Ré (T) Mi (S) Fa (T) Sol (T) La (T) Si (S) Do."
-      ],
-      formula: [
-        ['Schéma', 'T – T – S – T – T – T – S']
-      ],
-      exercise: "Dans Gammes, choisis Sol comme fondamentale, Majeure comme gamme. Sur une seule corde, compte les cases entre chaque note allumée : tu dois retomber exactement sur T-T-S-T-T-T-S. C'est ce schéma, et rien d'autre, qui fait « sonner majeur »."
-    },
-    {
-      id: 'minor-scale',
-      title: 'Gamme mineure naturelle',
-      body: [
-        "Chaque gamme majeure a une « relative mineure » : une gamme mineure qui utilise exactement les mêmes notes, mais qui commence sur le 6e degré. La mineure relative de Do majeur, c'est La mineur — même notes, autre point de départ.",
-        "Le schéma de tons/demi-tons change en conséquence : T-S-T-T-S-T-T au lieu de T-T-S-T-T-T-S pour la majeure."
-      ],
-      formula: [['Schéma', 'T – S – T – T – S – T – T']],
-      exercise: "Dans Gammes, affiche Do Majeure puis La Mineure naturelle : les points allumés sur le manche sont identiques. Seule la fondamentale (marquée différemment) change de position."
-    },
-    {
-      id: 'modes',
-      title: 'Les modes de la gamme majeure',
-      body: [
-        "Jouer une gamme majeure en commençant par un degré différent du I donne un « mode » : mêmes notes, mais un centre de gravité différent, donc une couleur différente.",
-        "Le mode le plus utilisé après le majeur (Ionien) et le mineur (Éolien) est le Dorien — un mineur légèrement plus lumineux, très courant en jazz et en funk."
-      ],
-      formula: [
-        ['I', 'Ionien (= majeur)'], ['II', 'Dorien'], ['III', 'Phrygien'],
-        ['IV', 'Lydien'], ['V', 'Mixolydien'], ['VI', 'Éolien (= mineur)'], ['VII', 'Locrien']
-      ],
-      exercise: "Dans Gammes, affiche Do Majeure. Sur le manche, joue uniquement les notes en partant de Ré jusqu'au Ré suivant (au lieu de Do à Do) : tu viens de jouer Ré Dorien, sans changer une seule note du schéma affiché."
-    },
-    {
-      id: 'pentatonic',
-      title: 'Gammes pentatoniques',
-      body: [
-        "Une pentatonique, c'est une gamme majeure ou mineure réduite à 5 notes, en retirant les deux notes les plus « instables ». Le résultat est très consonant — presque impossible de mal sonner avec, ce qui en fait la base de l'improvisation rock, blues et pop.",
-        "La pentatonique mineure et la pentatonique majeure du même nom partagent d'ailleurs les mêmes notes que la gamme majeure et sa relative mineure — juste avec 2 notes en moins."
-      ],
-      formula: [
-        ['Majeure', '1 – 2 – 3 – 5 – 6'],
-        ['Mineure', '1 – b3 – 4 – 5 – b7']
-      ],
-      exercise: "Dans Gammes, compare Mineure naturelle et Pentatonique mineure pour la même fondamentale : repère les 2 notes qui disparaissent."
-    },
-    {
-      id: 'blues-scale',
-      title: 'Gamme blues',
-      body: [
-        "La gamme blues, c'est la pentatonique mineure avec une note ajoutée — la « blue note », une quinte diminuée. C'est une note volontairement tendue, presque « fausse », et c'est exactement elle qui donne au blues son caractère plaintif.",
-        "Elle se glisse généralement entre deux autres notes plutôt que d'être tenue, comme une note de passage expressive."
-      ],
-      formula: [['Blues', '1 – b3 – 4 – b5 – 5 – b7']],
-      exercise: "Dans Gammes, sélectionne Blues et repère la note en plus par rapport à la pentatonique mineure — c'est elle qu'il faut apprendre à placer avec goût, pas à la marteler."
-    },
-    {
-      id: 'harmonization',
-      title: 'Harmoniser la gamme majeure',
-      body: [
-        "En empilant des tierces sur chaque degré de la gamme majeure, on obtient 7 accords — c'est exactement le système utilisé dans Progressions (I, ii, iii, IV, V, vi, vii°). C'est ce qui explique pourquoi certains accords « vont ensemble » dans une tonalité donnée.",
-        "Le vii° (7e degré) est diminué — c'est le seul accord instable du lot, rarement utilisé comme point de repos."
-      ],
-      formula: [
-        ['I', 'Majeur'], ['ii', 'mineur'], ['iii', 'mineur'], ['IV', 'Majeur'],
-        ['V', 'Majeur'], ['vi', 'mineur'], ['vii°', 'diminué']
-      ],
-      exercise: "Dans Progressions, choisis Do majeur et le style Pop : les degrés affichés (I, V, vi, IV) suivent exactement ce tableau — I et IV et V sont majeurs, vi est mineur."
-    },
-    {
-      id: 'cadences',
-      title: 'Cadences',
-      body: [
-        "Une cadence, c'est la façon dont une phrase musicale se termine — résolue ou en suspens. Quatre types reviennent tout le temps :",
-        "Parfaite (V→I) : résolution complète, ça sonne « fini ». Plagale (IV→I) : plus douce, l'« amen » des cantiques. Rompue (V→vi) : surprise, évite la résolution attendue. Demi-cadence : s'arrête sur V, en suspens, comme une question."
-      ],
-      formula: null,
-      exercise: "Dans Progressions, joue « 50s (I–vi–IV–V) » en boucle et écoute où ça semble « respirer » (vi) et où ça semble vouloir repartir (V à la fin, en suspens)."
-    },
-    {
-      id: 'dim-aug',
-      title: 'Accords diminués et augmentés',
-      body: [
-        "Un accord diminué empile deux tierces mineures — un son tendu, symétrique, souvent utilisé comme accord de passage entre deux accords plus stables plutôt que comme point de repos.",
-        "Un accord augmenté empile deux tierces majeures — plus rare, avec un caractère flottant, ni vraiment résolu ni vraiment tendu."
-      ],
-      formula: [
-        ['Diminué', '1 – b3 – b5'],
-        ['Augmenté', '1 – 3 – #5']
-      ],
-      exercise: "Sur la corde de Mi grave, pose une fondamentale. Compte 3 cases (tierce mineure) puis encore 3 (quinte diminuée) : tu as les 3 notes d'un accord diminué, à répartir sur le manche."
-    },
-    {
-      id: 'extensions',
-      title: 'Extensions : 9e, 11e, 13e',
-      body: [
-        "Rien n'empêche de continuer à empiler des tierces au-delà de la 7e : la 9e (= la 2de, une octave plus haut), la 11e (= la 4te), la 13e (= la 6te). En pratique, à la guitare, on ne joue presque jamais toutes les notes — on garde souvent juste la fondamentale, la tierce ou la 7e, et l'extension elle-même.",
-        "C'est cette sélection qui rend un accord « riche » sans le rendre injouable à 6 cordes."
-      ],
-      formula: [
-        ['9', '1 – 3 – 5 – b7 – 9'],
-        ['13', '1 – 3 – 5 – b7 – 9 – 11 – 13 (rarement joué en entier)']
-      ],
-      exercise: "Revois la fiche « Construire un accord » : une 9e, c'est simplement un 7e accord avec une note en plus. Essaie d'identifier laquelle en comparant Do7 et un Do9 sur une partition ou une tablature."
-    },
-    {
-      id: 'circle-of-fifths',
-      title: 'Cercle des quintes',
-      body: [
-        "En partant de n'importe quelle note et en montant systématiquement de quinte juste (7 demi-tons) en quinte juste, on finit par retomber sur toutes les 12 notes puis revenir au point de départ — c'est le cercle des quintes. Il montre quelles tonalités sont « proches » (peu de notes différentes) ou « éloignées » (beaucoup de notes différentes)."
-      ],
-      formula: null,
-      exercise: "Sur la corde de Mi grave, pars de Do et compte 7 cases (quinte juste) à répétition : Do, Sol, Ré, La... Continue et observe que tu balaies progressivement toutes les notes avant de revenir à Do."
-    },
-    {
-      id: 'tritone',
-      title: 'Le triton',
-      body: [
-        "Le triton, c'est l'intervalle de 6 demi-tons — exactement la moitié d'une octave. C'est l'intervalle le plus instable de la musique occidentale, et c'est lui qui crée la tension caractéristique des accords de 7e de dominante, en tirant l'oreille vers une résolution."
-      ],
-      formula: [['Triton', '6 demi-tons (quarte augmentée / quinte diminuée)']],
-      exercise: "Dans Accords, affiche Do 7 : le triton s'y trouve entre la tierce (Mi) et la 7e mineure (Sib). C'est cette tension précise qui donne envie d'aller vers Fa."
-    },
-    {
-      id: 'ear-tuning',
-      title: "Accorder à l'oreille (sans accordeur)",
-      body: [
-        "Méthode traditionnelle : la corde jouée à la 5e case doit sonner comme la corde suivante jouée à vide — sauf entre la corde de Sol et celle de Si, où c'est la 4e case qu'il faut utiliser (pas la 5e).",
-        "Cette méthode garantit que les cordes sonnent justes les unes par rapport aux autres, mais pas forcément à la bonne hauteur absolue — d'où l'intérêt de vérifier ensuite avec une référence."
-      ],
-      formula: null,
-      exercise: "Accorde ta guitare corde par corde avec cette méthode, puis vérifie chaque corde avec les sons de référence de l'onglet Accordeur pour voir si tu es tombé juste."
-    },
-    {
-      id: 'arpeggios',
-      title: 'Arpèges',
-      body: [
-        "Un arpège, c'est simplement un accord joué note par note au lieu d'être gratté d'un coup. Mêmes notes, même théorie — seule la technique change. C'est un excellent moyen de vraiment entendre chaque note d'un accord individuellement."
-      ],
-      formula: null,
-      exercise: "Choisis n'importe quel accord dans Accords. Au lieu de le gratter, joue chaque corde marquée une par une, dans l'ordre grave vers aigu."
-    },
-    {
-      id: 'capo',
-      title: 'Le capodastre',
-      body: [
-        "Le capodastre bloque toutes les cordes à une case donnée, ce qui transpose instantanément tout ce que tu joues sans changer les formes d'accords que tu connais déjà. Pratique pour adapter une tonalité à une voix, ou rejouer une forme ouverte plus haut sur le manche."
-      ],
-      formula: null,
-      exercise: "Imagine un capo à la 2e case en jouant une forme de Ré ouvert. Dans Accords, vérifie : quelle note se trouve 2 cases au-dessus de Ré ? C'est la note que tu entends réellement."
-    },
-    {
-      id: 'barre-technique',
-      title: 'Jouer un accord barré',
-      body: [
-        "Le barré consiste à plaquer plusieurs cordes avec un seul doigt (souvent l'index), à plat sur une case. Trois repères utiles : utilise le côté du doigt plutôt que le coussinet, garde le pouce centré derrière le manche, et laisse le poids du bras aider — pas seulement la force du doigt."
-      ],
-      formula: null,
-      exercise: "Dans Accords, choisis un accord et sélectionne une position « Forme Mi » ou « Forme La » (barrée) avec le stepper. Entraîne-toi à faire sonner les 6 cordes proprement avant de passer à l'accord suivant."
-    },
-    {
-      id: 'expression',
-      title: "Techniques d'expression",
-      body: [
-        "Quatre techniques de base pour sortir du simple médiator : le bend (tirer la corde pour monter la hauteur sans changer de case), le hammer-on (faire sonner une note plus aiguë en tapant sur la touche sans jouer la corde), le pull-off (l'inverse, en relâchant), et le slide (glisser d'une case à l'autre en gardant la note active)."
-      ],
-      formula: null,
-      exercise: "Joue une note avec le médiator, puis enchaîne un hammer-on 2 cases plus haut sans rejouer la corde. Compare le son à la même note jouée normalement au médiator."
+  const MAJOR_DEGREES = [0,2,4,5,7,9,11];
+  const MINOR_DEGREES = [0,2,3,5,7,8,10];
+  // which mode fits each scale degree, for the "play this over that chord" suggestion
+  const MAJOR_DEGREE_MODES = ['Majeure','Dorien','Phrygien','Lydien','Mixolydien','Mineure naturelle','Locrien'];
+  const MINOR_DEGREE_MODES = ['Mineure naturelle','Locrien','Majeure','Dorien','Phrygien','Lydien','Mixolydien'];
+
+  // Each preset: degree index into the scale above, chord quality, roman numeral label
+  const PRESETS = {
+    major: [
+      { name:'Pop (I–V–vi–IV)', chords:[
+        {d:0,q:'maj',r:'I'}, {d:4,q:'maj',r:'V'}, {d:5,q:'min',r:'vi'}, {d:3,q:'maj',r:'IV'}
+      ]},
+      { name:'Rétro (I–vi–IV–V)', chords:[
+        {d:0,q:'maj',r:'I'}, {d:5,q:'min',r:'vi'}, {d:3,q:'maj',r:'IV'}, {d:4,q:'maj',r:'V'}
+      ]},
+      { name:'Blues (I7–IV7–I7–V7)', chords:[
+        {d:0,q:'7',r:'I7'}, {d:3,q:'7',r:'IV7'}, {d:0,q:'7',r:'I7'}, {d:4,q:'7',r:'V7'}
+      ]},
+      { name:'Jazz (ii–V–I)', chords:[
+        {d:1,q:'m7',r:'iim7'}, {d:4,q:'7',r:'V7'}, {d:0,q:'maj7',r:'Imaj7'}, {d:0,q:'maj7',r:'Imaj7'}
+      ]},
+      { name:'Folk (I–IV–V–I)', chords:[
+        {d:0,q:'maj',r:'I'}, {d:3,q:'maj',r:'IV'}, {d:4,q:'maj',r:'V'}, {d:0,q:'maj',r:'I'}
+      ]},
+      { name:'Canon (I–V–vi–iii–IV–I–IV–V)', chords:[
+        {d:0,q:'maj',r:'I'}, {d:4,q:'maj',r:'V'}, {d:5,q:'min',r:'vi'}, {d:2,q:'min',r:'iii'},
+        {d:3,q:'maj',r:'IV'}, {d:0,q:'maj',r:'I'}, {d:3,q:'maj',r:'IV'}, {d:4,q:'maj',r:'V'}
+      ]},
+      { name:'Ballade (I–iii–IV–V)', chords:[
+        {d:0,q:'maj',r:'I'}, {d:2,q:'min',r:'iii'}, {d:3,q:'maj',r:'IV'}, {d:4,q:'maj',r:'V'}
+      ]},
+      { name:'Suspendu (ii–IV–I–V)', chords:[
+        {d:1,q:'min',r:'ii'}, {d:3,q:'maj',r:'IV'}, {d:0,q:'maj',r:'I'}, {d:4,q:'maj',r:'V'}
+      ]},
+      { name:'Ascendant (I–ii–iii–IV)', chords:[
+        {d:0,q:'maj',r:'I'}, {d:1,q:'min',r:'ii'}, {d:2,q:'min',r:'iii'}, {d:3,q:'maj',r:'IV'}
+      ]}
+    ],
+    minor: [
+      { name:'Pop mineur (i–VI–III–VII)', chords:[
+        {d:0,q:'min',r:'i'}, {d:5,q:'maj',r:'VI'}, {d:2,q:'maj',r:'III'}, {d:6,q:'maj',r:'VII'}
+      ]},
+      { name:'Rock (i–VII–VI–VII)', chords:[
+        {d:0,q:'min',r:'i'}, {d:6,q:'maj',r:'VII'}, {d:5,q:'maj',r:'VI'}, {d:6,q:'maj',r:'VII'}
+      ]},
+      { name:'Naturelle (i–iv–v–i)', chords:[
+        {d:0,q:'min',r:'i'}, {d:3,q:'min',r:'iv'}, {d:4,q:'min',r:'v'}, {d:0,q:'min',r:'i'}
+      ]},
+      { name:'Cadence harmonique (i–iv–V7–i)', chords:[
+        {d:0,q:'min',r:'i'}, {d:3,q:'min',r:'iv'}, {d:4,q:'7',r:'V7'}, {d:0,q:'min',r:'i'}
+      ]},
+      { name:'Jazz mineur (im7–ivm7–V7)', chords:[
+        {d:0,q:'m7',r:'im7'}, {d:3,q:'m7',r:'ivm7'}, {d:4,q:'7',r:'V7'}, {d:0,q:'min',r:'i'}
+      ]},
+      { name:'Modal (i–III–VII–iv)', chords:[
+        {d:0,q:'min',r:'i'}, {d:2,q:'maj',r:'III'}, {d:6,q:'maj',r:'VII'}, {d:3,q:'min',r:'iv'}
+      ]},
+      { name:'Descendant (i–VII–VI–v)', chords:[
+        {d:0,q:'min',r:'i'}, {d:6,q:'maj',r:'VII'}, {d:5,q:'maj',r:'VI'}, {d:4,q:'min',r:'v'}
+      ]}
+    ]
+  };
+
+  const rootsEl = document.getElementById('progRoots');
+  const modeEl = document.getElementById('progMode');
+  const stylesEl = document.getElementById('progStyles');
+  const nameEl = document.getElementById('progName');
+  const chartEl = document.getElementById('progChart');
+  const focusRomanEl = document.getElementById('progFocusRoman');
+  const focusNameEl = document.getElementById('progFocusName');
+  const focusDiagramEl = document.getElementById('progFocusDiagram');
+  const suggestGlobalEl = document.getElementById('suggestGlobal');
+  const suggestChordEl = document.getElementById('suggestChord');
+  const suggestGlobalGoBtn = document.getElementById('suggestGlobalGo');
+  const suggestChordGoBtn = document.getElementById('suggestChordGo');
+  const posPrevBtn = document.getElementById('progPosPrev');
+  const posNextBtn = document.getElementById('progPosNext');
+  const posLabelEl = document.getElementById('progPosLabel');
+  const playBtn = document.getElementById('progPlay');
+  const loopToggle = document.getElementById('progLoop');
+  const rhythmStyleEl = document.getElementById('progRhythmStyle');
+  const bpmSlider = document.getElementById('progBpmSlider');
+  const bpmValue = document.getElementById('progBpmValue');
+  const beatsSelect = document.getElementById('progBeatsSelect');
+  const chordVolSlider = document.getElementById('progChordVolSlider');
+  const chordVolValue = document.getElementById('progChordVolValue');
+  const rhythmVolSlider = document.getElementById('progRhythmVolSlider');
+  const rhythmVolValue = document.getElementById('progRhythmVolValue');
+
+  let chosenRoot = 'C', chosenMode = 'major', chosenStyleIdx = 0;
+  let chosenRhythmStyle = 'none';
+  let progPlayToken = 0, progIsPlaying = false;
+  let progBpm = 90;
+  let focusIndex = 0;
+  let progVoicingOverride = {}; // { chordIndex: variantIndex } — cleared when mode/style changes
+  let BEATS_PER_CHORD = 4;
+  let chordVolume = 0.85, rhythmVolume = 0.55;
+
+  chordVolSlider.addEventListener('input', function(){
+    chordVolume = parseInt(chordVolSlider.value, 10) / 100;
+    chordVolValue.textContent = chordVolSlider.value + '%';
+  });
+  rhythmVolSlider.addEventListener('input', function(){
+    rhythmVolume = parseInt(rhythmVolSlider.value, 10) / 100;
+    rhythmVolValue.textContent = rhythmVolSlider.value + '%';
+  });
+
+  bpmSlider.addEventListener('input', function(){
+    progBpm = parseInt(bpmSlider.value, 10);
+    bpmValue.textContent = progBpm;
+  });
+
+  beatsSelect.addEventListener('change', function(){
+    BEATS_PER_CHORD = parseInt(beatsSelect.value, 10);
+  });
+
+  rhythmStyleEl.addEventListener('change', function(){
+    chosenRhythmStyle = rhythmStyleEl.value;
+  });
+
+  NOTES.forEach(function(n){
+    const c = document.createElement('button');
+    c.className = 'chip' + (n===chosenRoot? ' active':'');
+    c.textContent = n;
+    c.addEventListener('click', function(){
+      chosenRoot = n;
+      document.querySelectorAll('#progRoots .chip').forEach(x=>x.classList.remove('active'));
+      c.classList.add('active');
+      refresh();
+    });
+    rootsEl.appendChild(c);
+  });
+
+  modeEl.querySelectorAll('.chip').forEach(function(c){
+    if(c.dataset.mode === chosenMode) c.classList.add('active');
+    c.addEventListener('click', function(){
+      chosenMode = c.dataset.mode;
+      chosenStyleIdx = 0;
+      progVoicingOverride = {};
+      modeEl.querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));
+      c.classList.add('active');
+      buildStyleOptions();
+      refresh();
+    });
+  });
+
+  function buildStyleOptions(){
+    stylesEl.innerHTML = '';
+    PRESETS[chosenMode].forEach(function(preset, i){
+      const opt = document.createElement('option');
+      opt.value = i;
+      opt.textContent = preset.name;
+      if(i === chosenStyleIdx) opt.selected = true;
+      stylesEl.appendChild(opt);
+    });
+  }
+  stylesEl.addEventListener('change', function(){
+    chosenStyleIdx = parseInt(stylesEl.value, 10);
+    progVoicingOverride = {};
+    refresh();
+  });
+  buildStyleOptions();
+
+  function currentChords(){
+    const rootIdx = NOTES.indexOf(chosenRoot);
+    const degrees = chosenMode==='major' ? MAJOR_DEGREES : MINOR_DEGREES;
+    const preset = PRESETS[chosenMode][chosenStyleIdx];
+    return preset.chords.map(function(c, i){
+      const chordRootIdx = (rootIdx + degrees[c.d]) % 12;
+      const chordRootName = NOTES[chordRootIdx];
+      const variants = window.ChordEngine.buildChordVariants(chordRootName, c.q);
+      let variantIdx = progVoicingOverride[i];
+      if(variantIdx === undefined || variantIdx >= variants.length){
+        variantIdx = variants.findIndex(v=>v.id==='open');
+        if(variantIdx === -1) variantIdx = 0;
+      }
+      return {
+        roman: c.r,
+        degree: c.d,
+        rootIdx: chordRootIdx,
+        chordName: chordRootName + ' ' + window.ChordEngine.QUALITY_LABEL[c.q],
+        variants: variants,
+        variantIndex: variantIdx,
+        variant: variants[variantIdx]
+      };
+    });
+  }
+
+  let activeProgNodes = [];
+
+  function stopPlayback(){
+    progPlayToken++;
+    progIsPlaying = false;
+    playBtn.textContent = 'Jouer la progression';
+    silenceNodes(activeProgNodes);
+    activeProgNodes = [];
+  }
+
+  // Schedules exactly one bar (one chord), starting "now". Reading
+  // chosenRhythmStyle / progBpm fresh here is what lets both update
+  // live while playing, without needing to stop and restart.
+  function playBar(ch){
+    const chordDuration = (60 / progBpm) * BEATS_PER_CHORD;
+    const registry = [];
+    if(ch.variant){
+      ch.variant.frets.forEach(function(f, stringIdx){
+        if(f === -1) return;
+        const freq = midiToFreq(STRING_MIDI[stringIdx] + f);
+        const strumOffset = stringIdx * 0.014;
+        const handle = playTone(freq, chordDuration*0.92, strumOffset, 0.16 * chordVolume);
+        if(handle) registry.push(handle);
+      });
     }
+    if(chosenRhythmStyle !== 'none'){
+      playRhythmStyle(chosenRhythmStyle, 0, chordDuration, registry, rhythmVolume);
+    }
+    activeProgNodes = registry;
+    return chordDuration;
+  }
+
+  function renderChart(chords){
+    chartEl.innerHTML = '';
+    chords.forEach(function(ch, i){
+      const tok = document.createElement('button');
+      tok.className = 'prog-token' + (i === focusIndex ? ' playing' : '');
+      tok.type = 'button';
+      tok.innerHTML = '<span class="roman">'+ch.roman+'</span><span class="name">'+ch.chordName+'</span>';
+      tok.addEventListener('click', function(){
+        focusIndex = i;
+        renderChart(chords);
+        renderFocus(chords);
+      });
+      chartEl.appendChild(tok);
+    });
+  }
+
+  function renderFocus(chords){
+    const ch = chords[focusIndex] || chords[0];
+    if(!ch) return;
+    focusRomanEl.textContent = ch.roman;
+    focusNameEl.textContent = ch.chordName;
+    focusDiagramEl.innerHTML = '';
+    if(ch.variant){
+      window.ChordEngine.renderChordDiagram(focusDiagramEl, ch.variant.frets, ch.variant.barre, ch.rootIdx, 'notes');
+    }
+    const variants = ch.variants || [];
+    posLabelEl.textContent = ch.variant
+      ? ch.variant.label + (variants.length > 1 ? ' · '+(ch.variantIndex+1)+'/'+variants.length : '')
+      : '';
+    posPrevBtn.disabled = ch.variantIndex <= 0;
+    posNextBtn.disabled = ch.variantIndex >= variants.length - 1;
+
+    // scale/mode suggestions
+    const degreeModes = chosenMode==='major' ? MAJOR_DEGREE_MODES : MINOR_DEGREE_MODES;
+    const globalType = chosenMode==='major' ? 'Majeure' : 'Mineure naturelle';
+    suggestGlobalEl.textContent = chosenRoot + ' ' + globalType;
+    const chordModeType = degreeModes[ch.degree];
+    suggestChordEl.textContent = noteName(ch.rootIdx) + ' ' + chordModeType;
+    suggestGlobalGoBtn.onclick = function(){
+      window.ScaleEngine.selectScale(chosenRoot, globalType);
+      setActiveTab('scales');
+    };
+    suggestChordGoBtn.onclick = function(){
+      window.ScaleEngine.selectScale(noteName(ch.rootIdx), chordModeType);
+      setActiveTab('scales');
+    };
+  }
+
+  function stepFocusPosition(dir){
+    const chords0 = currentChords();
+    const current = progVoicingOverride[focusIndex] ?? chords0[focusIndex].variantIndex;
+    if(dir < 0){
+      progVoicingOverride[focusIndex] = Math.max(0, current - 1);
+    }else{
+      progVoicingOverride[focusIndex] = Math.min(chords0[focusIndex].variants.length - 1, current + 1);
+    }
+    const chords = currentChords();
+    renderChart(chords);
+    renderFocus(chords);
+  }
+  posPrevBtn.addEventListener('click', function(){ stepFocusPosition(-1); });
+  posNextBtn.addEventListener('click', function(){ stepFocusPosition(1); });
+  addSwipeHandler(focusDiagramEl, function(){ stepFocusPosition(1); }, function(){ stepFocusPosition(-1); });
+
+  function scheduleBar(barIndex, myToken, stopAt){
+    if(progPlayToken !== myToken) return;
+    getCtx();
+    const chords = currentChords(); // fresh every bar: picks up root/mode/style/rhythm/tempo changes live
+    const idx = barIndex % chords.length;
+    focusIndex = idx;
+    renderChart(chords);
+    renderFocus(chords);
+    const duration = playBar(chords[idx]);
+    setTimeout(function(){
+      if(progPlayToken !== myToken) return;
+      const nextIndex = barIndex + 1;
+      if(loopToggle.checked || nextIndex < stopAt){
+        scheduleBar(nextIndex, myToken, stopAt);
+      }else{
+        progIsPlaying = false;
+        playBtn.textContent = 'Jouer la progression';
+      }
+    }, duration*1000);
+  }
+
+  function schedulePlayback(){
+    const myToken = progPlayToken;
+    const stopAt = currentChords().length;
+    scheduleBar(0, myToken, stopAt);
+  }
+
+  function refresh(){
+    const preset = PRESETS[chosenMode][chosenStyleIdx];
+    nameEl.textContent = preset.name;
+    const chords = currentChords();
+    if(focusIndex >= chords.length) focusIndex = 0;
+    renderChart(chords);
+    renderFocus(chords);
+    // no stopPlayback() here anymore — root/mode/style now pick up live at the next bar boundary
+  }
+
+  playBtn.addEventListener('click', function(){
+    if(progIsPlaying){
+      stopPlayback();
+    }else{
+      progIsPlaying = true;
+      playBtn.textContent = 'Arrêter';
+      schedulePlayback();
+    }
+  });
+
+  refresh();
+})();
+
+/* ============================================================
+   EAR TRAINER
+   ============================================================ */
+(function(){
+  const INTERVALS = [
+    ['2nde mineure',1],['2nde majeure',2],['3ce mineure',3],['3ce majeure',4],
+    ['4te juste',5],['4te augmentée',6],['5te juste',7],['6te mineure',8],
+    ['6te majeure',9],['7me mineure',10],['7me majeure',11],['Octave',12]
+  ];
+  const CHORD_QUALITIES = [
+    ['Majeur', [0,4,7]],
+    ['Mineur', [0,3,7]],
+    ['7 (dominant)', [0,4,7,10]],
+    ['Maj7', [0,4,7,11]],
+    ['m7', [0,3,7,10]]
   ];
 
-  const contentEl = document.getElementById('ficheContent');
-  const topicsEl = document.getElementById('ficheTopics');
-  let chosenFiche = 0;
+  const titleEl = document.getElementById('earTitle');
+  const subEl = document.getElementById('earSub');
+  const modeEl = document.getElementById('earMode');
+  const playBtn = document.getElementById('earPlay');
+  const nextBtn = document.getElementById('earNext');
+  const scoreEl = document.getElementById('earScore');
+  const choicesEl = document.getElementById('earChoices');
 
-  FICHES.forEach(function(fiche, i){
-    const opt = document.createElement('option');
-    opt.value = i;
-    opt.textContent = fiche.title;
-    topicsEl.appendChild(opt);
-  });
-  topicsEl.addEventListener('change', function(){
-    chosenFiche = parseInt(topicsEl.value, 10);
-    render();
-  });
-
-  function render(){
-    const fiche = FICHES[chosenFiche];
-    let html = '<h3 class="fiche-title">'+fiche.title+'</h3><div class="fiche-body">';
-    fiche.body.forEach(function(p){ html += '<p>'+p+'</p>'; });
-    html += '</div>';
-    if(fiche.formula){
-      html += '<div class="fiche-formula">';
-      fiche.formula.forEach(function(row){
-        html += '<span class="num">'+row[0]+'</span><span>'+row[1]+'</span>';
-      });
-      html += '</div>';
+  const MODES = {
+    intervals: {
+      title: "Reconnaissance d'intervalles",
+      sub: "Deux notes sont jouées l'une après l'autre. Identifie l'intervalle qui les sépare.",
+      playLabel: 'Jouer les deux notes',
+      correct: 0, total: 0,
+      current: null,
+      newQuestion: function(){
+        const root = 50 + Math.floor(Math.random()*14);
+        const interval = INTERVALS[Math.floor(Math.random()*INTERVALS.length)][1];
+        this.current = {root, interval};
+        const correctLabel = INTERVALS.find(i=>i[1]===interval)[0];
+        let pool = INTERVALS.map(i=>i[0]).filter(l=>l!==correctLabel);
+        pool.sort(()=>Math.random()-0.5);
+        return {correctLabel, options: [correctLabel, ...pool.slice(0,5)].sort(()=>Math.random()-0.5)};
+      },
+      play: function(){
+        playTone(midiToFreq(this.current.root), 0.7, 0, 0.16);
+        playTone(midiToFreq(this.current.root + this.current.interval), 0.7, 0.85, 0.16);
+      }
+    },
+    chords: {
+      title: "Reconnaissance d'accords",
+      sub: "Un accord est joué en bloc. Devine sa couleur : majeur, mineur, 7e, maj7, m7.",
+      playLabel: "Jouer l'accord",
+      correct: 0, total: 0,
+      current: null,
+      newQuestion: function(){
+        const root = 48 + Math.floor(Math.random()*13); // comfortable chord range
+        const qIdx = Math.floor(Math.random()*CHORD_QUALITIES.length);
+        this.current = {root, qIdx};
+        const correctLabel = CHORD_QUALITIES[qIdx][0];
+        const options = CHORD_QUALITIES.map(q=>q[0]); // only 5 total — show them all
+        return {correctLabel, options: options.sort(()=>Math.random()-0.5)};
+      },
+      play: function(){
+        const offsets = CHORD_QUALITIES[this.current.qIdx][1];
+        offsets.forEach(function(o, i){
+          playTone(midiToFreq(this.current.root + o), 1.1, i*0.02, 0.12);
+        }, this);
+      }
+    },
+    seventh: {
+      title: "Repérer la 7e",
+      sub: "Un accord de 7e est joué en bloc (7, maj7 ou m7). La 7e qu'il contient est-elle majeure ou mineure ?",
+      playLabel: "Jouer l'accord",
+      correct: 0, total: 0,
+      current: null,
+      // dominant 7 and m7 both carry a MINOR 7th; maj7 carries a MAJOR 7th
+      qualities: [
+        ['7 (dominant)', [0,4,7,10], 'Mineure'],
+        ['Maj7', [0,4,7,11], 'Majeure'],
+        ['m7', [0,3,7,10], 'Mineure']
+      ],
+      newQuestion: function(){
+        const root = 48 + Math.floor(Math.random()*13);
+        const qIdx = Math.floor(Math.random()*this.qualities.length);
+        this.current = {root, qIdx};
+        const correctLabel = this.qualities[qIdx][2];
+        return {correctLabel, options: ['Majeure','Mineure']};
+      },
+      play: function(){
+        const offsets = this.qualities[this.current.qIdx][1];
+        offsets.forEach(function(o, i){
+          playTone(midiToFreq(this.current.root + o), 1.1, i*0.02, 0.12);
+        }, this);
+      }
     }
-    html += '<div class="fiche-exercise"><div class="fiche-exercise-label">Sur ta guitare</div><p>'+fiche.exercise+'</p></div>';
-    contentEl.innerHTML = html;
+  };
+
+  let currentMode = 'intervals';
+  let answered = false;
+
+  modeEl.querySelectorAll('.chip').forEach(function(c){
+    c.addEventListener('click', function(){
+      currentMode = c.dataset.mode;
+      modeEl.querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));
+      c.classList.add('active');
+      const m = MODES[currentMode];
+      titleEl.textContent = m.title;
+      subEl.textContent = m.sub;
+      playBtn.textContent = m.playLabel;
+      updateScore();
+      newQuestion();
+    });
+  });
+
+  function updateScore(){
+    const m = MODES[currentMode];
+    scoreEl.textContent = 'Score de la session : '+m.correct+' / '+m.total;
   }
-  render();
+
+  function newQuestion(){
+    answered = false;
+    const m = MODES[currentMode];
+    const {correctLabel, options} = m.newQuestion();
+    choicesEl.innerHTML = '';
+    options.forEach(function(label){
+      const b = document.createElement('button');
+      b.className = 'btn choice-btn';
+      b.textContent = label;
+      b.addEventListener('click', function(){
+        if(answered) return;
+        answered = true;
+        m.total++;
+        if(label === correctLabel){
+          m.correct++;
+          b.classList.add('correct');
+        }else{
+          b.classList.add('wrong');
+          Array.from(choicesEl.children).forEach(function(c){
+            if(c.textContent === correctLabel) c.classList.add('correct');
+          });
+        }
+        updateScore();
+      });
+      choicesEl.appendChild(b);
+    });
+  }
+
+  playBtn.addEventListener('click', function(){ MODES[currentMode].play(); });
+  nextBtn.addEventListener('click', newQuestion);
+
+  newQuestion();
+})();
+
+/* ============================================================
+   STORAGE — uses Claude's window.storage when available (inside
+   claude.ai), falls back to localStorage when the app runs on its
+   own (GitHub Pages, installed as a home-screen app, etc.)
+   ============================================================ */
+const appStorage = {
+  async get(key){
+    if(window.storage){
+      try{ return await window.storage.get(key, false); }catch(e){ return null; }
+    }
+    const v = localStorage.getItem(key);
+    return v!==null ? {key, value:v, shared:false} : null;
+  },
+  async set(key, value){
+    if(window.storage){
+      try{ return await window.storage.set(key, value, false); }catch(e){ return null; }
+    }
+    localStorage.setItem(key, value);
+    return {key, value, shared:false};
+  },
+  async delete(key){
+    if(window.storage){
+      try{ return await window.storage.delete(key, false); }catch(e){ return null; }
+    }
+    localStorage.removeItem(key);
+    return {key, deleted:true, shared:false};
+  }
+};
+
+/* ============================================================
+   IDÉES — record a riff, trim (non-destructively) start/end,
+   loop it, keep a light title/date. Persistent via appStorage.
+   ============================================================ */
+const IDEAS_INDEX_KEY = 'ideas:index';
+
+async function getIdeasIndex(){
+  try{
+    const res = await appStorage.get(IDEAS_INDEX_KEY);
+    return res ? JSON.parse(res.value) : [];
+  }catch(e){ return []; }
+}
+async function setIdeasIndex(ids){
+  try{ await appStorage.set(IDEAS_INDEX_KEY, JSON.stringify(ids)); }catch(e){}
+}
+async function getIdea(id){
+  try{
+    const res = await appStorage.get('idea:'+id);
+    return res ? JSON.parse(res.value) : null;
+  }catch(e){ return null; }
+}
+async function setIdea(idea){
+  try{ await appStorage.set('idea:'+idea.id, JSON.stringify(idea)); }catch(e){}
+}
+async function deleteIdeaStorage(id){
+  const ids = await getIdeasIndex();
+  await setIdeasIndex(ids.filter(x=>x!==id));
+  await appStorage.delete('idea:'+id);
+}
+
+function formatIdeaTime(t){
+  if(!isFinite(t) || t<0) t = 0;
+  const m = Math.floor(t/60), s = Math.floor(t%60);
+  return m+':'+String(s).padStart(2,'0');
+}
+
+function buildIdeaCard(idea, mode){
+  const wrap = document.createElement('div');
+  wrap.className = mode==='saved' ? 'idea-entry' : 'idea-player';
+
+  const audio = new Audio(idea.audio);
+  audio.preload = 'metadata';
+  let playing = false, looping = false;
+
+  const row = document.createElement('div');
+  row.className = 'idea-player-row';
+
+  const playBtn = document.createElement('button');
+  playBtn.className = 'stepper-btn idea-play-btn';
+  playBtn.type = 'button';
+  playBtn.textContent = '▶';
+  row.appendChild(playBtn);
+
+  const meta = document.createElement('div');
+  meta.className = 'idea-meta';
+  const titleInput = document.createElement('input');
+  titleInput.type = 'text';
+  titleInput.className = 'idea-title';
+  titleInput.placeholder = 'Idée du ' + idea.date;
+  titleInput.value = idea.title || '';
+  titleInput.style.cssText = 'border:none; background:transparent; width:100%; font:inherit; padding:0; color:inherit;';
+  meta.appendChild(titleInput);
+  const sub = document.createElement('div');
+  sub.className = 'idea-sub';
+  sub.textContent = idea.date + ' · ' + formatIdeaTime(idea.duration);
+  meta.appendChild(sub);
+  row.appendChild(meta);
+
+  const loopLabel = document.createElement('label');
+  loopLabel.className = 'wake-toggle loop-toggle idea-loop-toggle';
+  loopLabel.innerHTML = '<span class="wake-toggle-title">Boucle</span><input type="checkbox"><span class="wake-switch"></span>';
+  const loopCheckbox = loopLabel.querySelector('input');
+  row.appendChild(loopLabel);
+
+  wrap.appendChild(row);
+
+  const trimToggleBtn = document.createElement('button');
+  trimToggleBtn.className = 'btn small ghost idea-trim-toggle';
+  trimToggleBtn.type = 'button';
+  trimToggleBtn.textContent = 'Ajuster début / fin';
+  wrap.appendChild(trimToggleBtn);
+
+  const dur = idea.duration || 1;
+  const trimControls = document.createElement('div');
+  trimControls.className = 'idea-trim-controls';
+  trimControls.innerHTML =
+    '<label>Début <span class="trim-start-val">'+formatIdeaTime(idea.trimStart||0)+'</span></label>'+
+    '<input type="range" class="trim-start-range" min="0" max="'+dur+'" step="0.1" value="'+(idea.trimStart||0)+'">'+
+    '<label>Fin <span class="trim-end-val">'+formatIdeaTime(idea.trimEnd||dur)+'</span></label>'+
+    '<input type="range" class="trim-end-range" min="0" max="'+dur+'" step="0.1" value="'+(idea.trimEnd||dur)+'">'+
+    '<button class="btn small ghost idea-trim-reset" type="button">Retirer le rognage</button>';
+  wrap.appendChild(trimControls);
+
+  trimToggleBtn.addEventListener('click', function(){
+    trimControls.classList.toggle('open');
+  });
+
+  const trimStartRange = trimControls.querySelector('.trim-start-range');
+  const trimEndRange = trimControls.querySelector('.trim-end-range');
+  const trimStartVal = trimControls.querySelector('.trim-start-val');
+  const trimEndVal = trimControls.querySelector('.trim-end-val');
+  const trimResetBtn = trimControls.querySelector('.idea-trim-reset');
+
+  function persistIfSaved(){
+    if(mode === 'saved'){
+      idea.title = titleInput.value.trim();
+      idea.trimStart = parseFloat(trimStartRange.value);
+      idea.trimEnd = parseFloat(trimEndRange.value);
+      setIdea(idea);
+    }
+  }
+
+  trimStartRange.addEventListener('input', function(){
+    let v = parseFloat(trimStartRange.value);
+    const endV = parseFloat(trimEndRange.value);
+    if(v >= endV) v = Math.max(0, endV - 0.1);
+    idea.trimStart = v;
+    trimStartVal.textContent = formatIdeaTime(v);
+  });
+  trimStartRange.addEventListener('change', persistIfSaved);
+
+  trimEndRange.addEventListener('input', function(){
+    let v = parseFloat(trimEndRange.value);
+    const startV = parseFloat(trimStartRange.value);
+    if(v <= startV) v = Math.min(dur, startV + 0.1);
+    idea.trimEnd = v;
+    trimEndVal.textContent = formatIdeaTime(v);
+  });
+  trimEndRange.addEventListener('change', persistIfSaved);
+
+  trimResetBtn.addEventListener('click', function(){
+    idea.trimStart = 0; idea.trimEnd = idea.duration;
+    trimStartRange.value = 0; trimEndRange.value = idea.duration;
+    trimStartVal.textContent = formatIdeaTime(0);
+    trimEndVal.textContent = formatIdeaTime(idea.duration);
+    persistIfSaved();
+  });
+
+  titleInput.addEventListener('change', persistIfSaved);
+
+  loopCheckbox.addEventListener('change', function(){ looping = loopCheckbox.checked; });
+
+  audio.addEventListener('timeupdate', function(){
+    const end = idea.trimEnd || audio.duration || dur;
+    if(audio.currentTime >= end - 0.02){
+      if(looping){
+        audio.currentTime = idea.trimStart || 0;
+        audio.play();
+      }else{
+        audio.pause();
+        audio.currentTime = idea.trimStart || 0;
+        playBtn.textContent = '▶';
+        playing = false;
+      }
+    }
+  });
+  audio.addEventListener('ended', function(){ playBtn.textContent = '▶'; playing = false; });
+
+  playBtn.addEventListener('click', function(){
+    if(playing){
+      audio.pause();
+      playBtn.textContent = '▶';
+      playing = false;
+    }else{
+      audio.currentTime = idea.trimStart || 0;
+      audio.play();
+      playBtn.textContent = '❚❚';
+      playing = true;
+    }
+  });
+
+  if(mode === 'preview'){
+    const actionRow = document.createElement('div');
+    actionRow.className = 'row';
+    actionRow.style.cssText = 'margin-top:14px; gap:10px;';
+    const saveBtn = document.createElement('button');
+    saveBtn.className = 'btn primary';
+    saveBtn.type = 'button';
+    saveBtn.textContent = 'Garder cette idée';
+    const discardBtn = document.createElement('button');
+    discardBtn.className = 'btn ghost';
+    discardBtn.type = 'button';
+    discardBtn.textContent = 'Supprimer';
+    actionRow.appendChild(saveBtn);
+    actionRow.appendChild(discardBtn);
+    wrap.appendChild(actionRow);
+
+    saveBtn.addEventListener('click', async function(){
+      idea.title = titleInput.value.trim();
+      idea.trimStart = parseFloat(trimStartRange.value);
+      idea.trimEnd = parseFloat(trimEndRange.value);
+      await setIdea(idea);
+      const ids = await getIdeasIndex();
+      ids.unshift(idea.id);
+      await setIdeasIndex(ids);
+      audio.pause();
+      document.getElementById('recPreview').innerHTML = '';
+      renderJournal();
+    });
+    discardBtn.addEventListener('click', function(){
+      audio.pause();
+      document.getElementById('recPreview').innerHTML = '';
+    });
+  }else{
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'btn danger small idea-delete';
+    deleteBtn.type = 'button';
+    deleteBtn.textContent = 'Supprimer';
+    deleteBtn.addEventListener('click', async function(){
+      audio.pause();
+      await deleteIdeaStorage(idea.id);
+      renderJournal();
+    });
+    wrap.appendChild(deleteBtn);
+  }
+
+  return wrap;
+}
+
+async function renderJournal(){
+  const listEl = document.getElementById('ideasList');
+  if(!listEl) return;
+  const ids = await getIdeasIndex();
+  if(ids.length === 0){
+    listEl.innerHTML = '<div class="empty-state">Pas encore d\'idée enregistrée. Appuie sur le bouton rouge ci-dessus.</div>';
+    return;
+  }
+  listEl.innerHTML = '';
+  for(const id of ids){
+    const idea = await getIdea(id);
+    if(idea) listEl.appendChild(buildIdeaCard(idea, 'saved'));
+  }
+}
+
+(function(){
+  const recToggleBtn = document.getElementById('recToggle');
+  const recStatusEl = document.getElementById('recStatus');
+  const recPreviewEl = document.getElementById('recPreview');
+
+  if(!navigator.mediaDevices || !window.MediaRecorder){
+    recStatusEl.textContent = "Enregistrement non pris en charge par ce navigateur";
+    recToggleBtn.disabled = true;
+    return;
+  }
+
+  let mediaRecorder = null, recordedChunks = [], recordStream = null, recordStartTime = 0, isRecording = false;
+
+  function blobToDataUrl(blob){
+    return new Promise(function(resolve, reject){
+      const reader = new FileReader();
+      reader.onloadend = function(){ resolve(reader.result); };
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  recToggleBtn.addEventListener('click', async function(){
+    if(isRecording){
+      mediaRecorder.stop();
+      return;
+    }
+    try{
+      recordStream = await navigator.mediaDevices.getUserMedia({audio:true});
+    }catch(e){
+      recStatusEl.textContent = 'Micro indisponible ou refusé';
+      return;
+    }
+    recordedChunks = [];
+    mediaRecorder = new MediaRecorder(recordStream);
+    mediaRecorder.ondataavailable = function(e){ if(e.data.size>0) recordedChunks.push(e.data); };
+    mediaRecorder.onstop = async function(){
+      recordStream.getTracks().forEach(t=>t.stop());
+      const duration = (Date.now() - recordStartTime)/1000;
+      const blob = new Blob(recordedChunks, {type: mediaRecorder.mimeType || 'audio/webm'});
+      isRecording = false;
+      recToggleBtn.classList.remove('recording');
+      recStatusEl.textContent = 'Appuie pour enregistrer';
+      const dataUrl = await blobToDataUrl(blob);
+      const idea = {
+        id: String(Date.now()),
+        date: new Date().toISOString().slice(0,10),
+        title: '',
+        duration: duration,
+        trimStart: 0,
+        trimEnd: duration,
+        audio: dataUrl
+      };
+      recPreviewEl.innerHTML = '';
+      recPreviewEl.appendChild(buildIdeaCard(idea, 'preview'));
+    };
+    mediaRecorder.start();
+    recordStartTime = Date.now();
+    isRecording = true;
+    recToggleBtn.classList.add('recording');
+    recStatusEl.textContent = 'Enregistrement… appuie pour arrêter';
+  });
+})();
+
+renderJournal();
+
+})();
+</script>
+</body>
+</html>
