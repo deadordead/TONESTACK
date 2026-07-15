@@ -735,7 +735,8 @@
       </div>
       <div class="card sticky-top">
         <h3 id="progName" class="prog-title">Pop</h3>
-        <button class="btn primary" id="progPlay" style="width:100%; margin-bottom:14px;">Jouer la progression</button>
+        <button class="btn primary" id="progPlay" style="width:100%; margin-bottom:6px;">Jouer la progression</button>
+        <div class="status-line" id="soundEngineStatus" style="text-align:center; margin-bottom:14px;">Vérification du moteur audio…</div>
         <div class="prog-settings-row">
           <div class="prog-tempo">
             <label>Tempo</label>
@@ -894,6 +895,7 @@
   <span class="nav-chevron">▲</span>
 </button>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.32/Tone.min.js"></script>
 <script>
 (function(){
 "use strict";
@@ -1011,6 +1013,20 @@ function getCtx(){
   if(audioCtx.state === 'suspended') audioCtx.resume();
   return audioCtx;
 }
+let masterBus = null;
+function getMasterOutput(){
+  const ctx = getCtx();
+  if(!masterBus){
+    masterBus = ctx.createDynamicsCompressor();
+    masterBus.threshold.value = -12;
+    masterBus.knee.value = 20;
+    masterBus.ratio.value = 8;
+    masterBus.attack.value = 0.003;
+    masterBus.release.value = 0.25;
+    masterBus.connect(ctx.destination);
+  }
+  return masterBus;
+}
 function playTone(freq, duration, delay, gain){
   delay = delay || 0; gain = gain || 0.18;
   const ctx = getCtx();
@@ -1022,7 +1038,7 @@ function playTone(freq, duration, delay, gain){
   g.gain.setValueAtTime(0, t0);
   g.gain.linearRampToValueAtTime(gain, t0 + 0.02);
   g.gain.exponentialRampToValueAtTime(0.0001, t0 + duration);
-  osc.connect(g); g.connect(ctx.destination);
+  osc.connect(g); g.connect(getMasterOutput());
   osc.start(t0);
   osc.stop(t0 + duration + 0.05);
   return {source:osc, gain:g};
@@ -1058,7 +1074,7 @@ function playClick(delay, accent, volMult){
   osc.frequency.value = accent ? 1400 : 900;
   g.gain.setValueAtTime((accent ? 0.26 : 0.14) * volMult, t0);
   g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.06);
-  osc.connect(g); g.connect(ctx.destination);
+  osc.connect(g); g.connect(getMasterOutput());
   osc.start(t0); osc.stop(t0 + 0.07);
   return [{source:osc, gain:g}];
 }
@@ -1087,7 +1103,7 @@ function playKick(delay, velocity, volMult){
   osc.frequency.exponentialRampToValueAtTime(46, t0 + 0.09);
   g.gain.setValueAtTime(0.9 * velocity * volMult, t0);
   g.gain.exponentialRampToValueAtTime(0.001, t0 + 0.22);
-  osc.connect(g); g.connect(ctx.destination);
+  osc.connect(g); g.connect(getMasterOutput());
   osc.start(t0); osc.stop(t0 + 0.24);
   return [{source:osc, gain:g}];
 }
@@ -1103,14 +1119,14 @@ function playSnare(delay, velocity, volMult){
   const ng = ctx.createGain();
   ng.gain.setValueAtTime(0.5 * velocity * volMult, t0);
   ng.gain.exponentialRampToValueAtTime(0.001, t0 + 0.15);
-  noise.connect(hp); hp.connect(ng); ng.connect(ctx.destination);
+  noise.connect(hp); hp.connect(ng); ng.connect(getMasterOutput());
   noise.start(t0); noise.stop(t0 + 0.16);
   const osc = ctx.createOscillator();
   const og = ctx.createGain();
   osc.type = 'triangle'; osc.frequency.value = 190;
   og.gain.setValueAtTime(0.3 * velocity * volMult, t0);
   og.gain.exponentialRampToValueAtTime(0.001, t0 + 0.1);
-  osc.connect(og); og.connect(ctx.destination);
+  osc.connect(og); og.connect(getMasterOutput());
   osc.start(t0); osc.stop(t0 + 0.11);
   return [{source:noise, gain:ng}, {source:osc, gain:og}];
 }
@@ -1127,7 +1143,7 @@ function playHihat(delay, velocity, open, volMult){
   const dur = open ? 0.22 : 0.045;
   g.gain.setValueAtTime(0.22 * velocity * volMult, t0);
   g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
-  src.connect(hp); hp.connect(g); g.connect(ctx.destination);
+  src.connect(hp); hp.connect(g); g.connect(getMasterOutput());
   src.start(t0); src.stop(t0 + dur + 0.02);
   return [{source:src, gain:g}];
 }
@@ -1419,7 +1435,7 @@ function silenceNodes(handles){
     osc.frequency.value = accent ? 1400 : 900;
     g.gain.setValueAtTime(accent?0.28:0.16, time);
     g.gain.exponentialRampToValueAtTime(0.0001, time+0.06);
-    osc.connect(g); g.connect(ctx.destination);
+    osc.connect(g); g.connect(getMasterOutput());
     osc.start(time); osc.stop(time+0.07);
 
     const delay = Math.max(0, (time - ctx.currentTime)*1000);
@@ -2006,9 +2022,34 @@ function silenceNodes(handles){
   let BEATS_PER_CHORD = 4;
   let chordVolume = 0.85, rhythmVolume = 0.55;
 
+  // Prefer Tone.js's tested PluckSynth for a more guitar-like tone.
+  // If the library didn't load (offline, blocked CDN), fall back silently
+  // to the plain oscillator tone used everywhere else in the app.
+  let toneSynth = null;
+  const soundEngineStatusEl = document.getElementById('soundEngineStatus');
+  if(typeof Tone !== 'undefined'){
+    try{
+      toneSynth = new Tone.PolySynth(Tone.PluckSynth).toDestination();
+      toneSynth.volume.value = 20 * Math.log10(chordVolume);
+      soundEngineStatusEl.textContent = 'Son : corde pincée (Tone.js)';
+      soundEngineStatusEl.className = 'status-line ok';
+      soundEngineStatusEl.style.textAlign = 'center';
+      soundEngineStatusEl.style.marginBottom = '14px';
+    }catch(e){
+      toneSynth = null;
+    }
+  }
+  if(!toneSynth){
+    soundEngineStatusEl.textContent = 'Son : basique (secours — Tone.js indisponible)';
+    soundEngineStatusEl.className = 'status-line warn';
+    soundEngineStatusEl.style.textAlign = 'center';
+    soundEngineStatusEl.style.marginBottom = '14px';
+  }
+
   chordVolSlider.addEventListener('input', function(){
     chordVolume = parseInt(chordVolSlider.value, 10) / 100;
     chordVolValue.textContent = chordVolSlider.value + '%';
+    if(toneSynth) toneSynth.volume.value = chordVolume > 0 ? (20 * Math.log10(chordVolume)) : -60;
   });
   rhythmVolSlider.addEventListener('input', function(){
     rhythmVolume = parseInt(rhythmVolSlider.value, 10) / 100;
@@ -2104,6 +2145,7 @@ function silenceNodes(handles){
     playBtn.textContent = 'Jouer la progression';
     silenceNodes(activeProgNodes);
     activeProgNodes = [];
+    if(toneSynth) toneSynth.releaseAll();
   }
 
   // Schedules exactly one bar (one chord), starting "now". Reading
@@ -2113,13 +2155,23 @@ function silenceNodes(handles){
     const chordDuration = (60 / progBpm) * BEATS_PER_CHORD;
     const registry = [];
     if(ch.variant){
-      ch.variant.frets.forEach(function(f, stringIdx){
-        if(f === -1) return;
-        const freq = midiToFreq(STRING_MIDI[stringIdx] + f);
-        const strumOffset = stringIdx * 0.014;
-        const handle = playTone(freq, chordDuration*0.92, strumOffset, 0.16 * chordVolume);
-        if(handle) registry.push(handle);
-      });
+      if(toneSynth){
+        const now = Tone.now();
+        ch.variant.frets.forEach(function(f, stringIdx){
+          if(f === -1) return;
+          const freq = midiToFreq(STRING_MIDI[stringIdx] + f);
+          const strumOffset = stringIdx * 0.014;
+          toneSynth.triggerAttackRelease(freq, chordDuration*0.9, now + strumOffset);
+        });
+      }else{
+        ch.variant.frets.forEach(function(f, stringIdx){
+          if(f === -1) return;
+          const freq = midiToFreq(STRING_MIDI[stringIdx] + f);
+          const strumOffset = stringIdx * 0.014;
+          const handle = playTone(freq, chordDuration*0.92, strumOffset, 0.16 * chordVolume);
+          if(handle) registry.push(handle);
+        });
+      }
     }
     if(chosenRhythmStyle !== 'none'){
       playRhythmStyle(chosenRhythmStyle, 0, chordDuration, registry, rhythmVolume);
@@ -2233,6 +2285,7 @@ function silenceNodes(handles){
     if(progIsPlaying){
       stopPlayback();
     }else{
+      if(toneSynth && typeof Tone.start === 'function'){ Tone.start(); }
       progIsPlaying = true;
       playBtn.textContent = 'Arrêter';
       schedulePlayback();
