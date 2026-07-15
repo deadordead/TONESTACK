@@ -2023,33 +2023,52 @@ function silenceNodes(handles){
   let chordVolume = 0.85, rhythmVolume = 0.55;
 
   // Prefer Tone.js's tested PluckSynth for a more guitar-like tone.
-  // If the library didn't load (offline, blocked CDN), fall back silently
-  // to the plain oscillator tone used everywhere else in the app.
-  let toneSynth = null;
+  // Each pluck gets its own short-lived PluckSynth instance (documented,
+  // standalone usage) rather than wrapping it in PolySynth, since
+  // PolySynth only supports specific "voice" classes and PluckSynth
+  // likely isn't one of them — that mismatch is why the earlier version
+  // silently failed to construct.
   const soundEngineStatusEl = document.getElementById('soundEngineStatus');
-  if(typeof Tone !== 'undefined'){
-    try{
-      toneSynth = new Tone.PolySynth(Tone.PluckSynth).toDestination();
-      toneSynth.volume.value = 20 * Math.log10(chordVolume);
-      soundEngineStatusEl.textContent = 'Son : corde pincée (Tone.js)';
-      soundEngineStatusEl.className = 'status-line ok';
-      soundEngineStatusEl.style.textAlign = 'center';
-      soundEngineStatusEl.style.marginBottom = '14px';
-    }catch(e){
-      toneSynth = null;
-    }
-  }
-  if(!toneSynth){
+  const toneAvailable = typeof Tone !== 'undefined' && typeof Tone.PluckSynth === 'function';
+  let activeToneSynths = [];
+
+  if(toneAvailable){
+    soundEngineStatusEl.textContent = 'Son : corde pincée (Tone.js)';
+    soundEngineStatusEl.className = 'status-line ok';
+  }else{
     soundEngineStatusEl.textContent = 'Son : basique (secours — Tone.js indisponible)';
     soundEngineStatusEl.className = 'status-line warn';
-    soundEngineStatusEl.style.textAlign = 'center';
-    soundEngineStatusEl.style.marginBottom = '14px';
+  }
+  soundEngineStatusEl.style.textAlign = 'center';
+  soundEngineStatusEl.style.marginBottom = '14px';
+
+  function playToneNote(freq, duration, delay){
+    try{
+      const synth = new Tone.PluckSynth().toDestination();
+      synth.volume.value = chordVolume > 0 ? (20 * Math.log10(chordVolume)) : -60;
+      const t = Tone.now() + delay;
+      synth.triggerAttack(freq, t);
+      activeToneSynths.push(synth);
+      setTimeout(function(){
+        try{ synth.dispose(); }catch(e){}
+        activeToneSynths = activeToneSynths.filter(function(s){ return s!==synth; });
+      }, (delay + duration + 0.5) * 1000);
+      return true;
+    }catch(e){
+      return false;
+    }
+  }
+  function stopAllToneSynths(){
+    activeToneSynths.forEach(function(s){
+      try{ s.triggerRelease(); }catch(e){}
+      try{ s.dispose(); }catch(e){}
+    });
+    activeToneSynths = [];
   }
 
   chordVolSlider.addEventListener('input', function(){
     chordVolume = parseInt(chordVolSlider.value, 10) / 100;
     chordVolValue.textContent = chordVolSlider.value + '%';
-    if(toneSynth) toneSynth.volume.value = chordVolume > 0 ? (20 * Math.log10(chordVolume)) : -60;
   });
   rhythmVolSlider.addEventListener('input', function(){
     rhythmVolume = parseInt(rhythmVolSlider.value, 10) / 100;
@@ -2145,7 +2164,7 @@ function silenceNodes(handles){
     playBtn.textContent = 'Jouer la progression';
     silenceNodes(activeProgNodes);
     activeProgNodes = [];
-    if(toneSynth) toneSynth.releaseAll();
+    stopAllToneSynths();
   }
 
   // Schedules exactly one bar (one chord), starting "now". Reading
@@ -2155,13 +2174,16 @@ function silenceNodes(handles){
     const chordDuration = (60 / progBpm) * BEATS_PER_CHORD;
     const registry = [];
     if(ch.variant){
-      if(toneSynth){
-        const now = Tone.now();
+      if(toneAvailable){
         ch.variant.frets.forEach(function(f, stringIdx){
           if(f === -1) return;
           const freq = midiToFreq(STRING_MIDI[stringIdx] + f);
           const strumOffset = stringIdx * 0.014;
-          toneSynth.triggerAttackRelease(freq, chordDuration*0.9, now + strumOffset);
+          const ok = playToneNote(freq, chordDuration*0.9, strumOffset);
+          if(!ok){
+            const handle = playTone(freq, chordDuration*0.92, strumOffset, 0.16 * chordVolume);
+            if(handle) registry.push(handle);
+          }
         });
       }else{
         ch.variant.frets.forEach(function(f, stringIdx){
@@ -2285,7 +2307,7 @@ function silenceNodes(handles){
     if(progIsPlaying){
       stopPlayback();
     }else{
-      if(toneSynth && typeof Tone.start === 'function'){ Tone.start(); }
+      if(toneAvailable && typeof Tone.start === 'function'){ Tone.start(); }
       progIsPlaying = true;
       playBtn.textContent = 'Arrêter';
       schedulePlayback();
