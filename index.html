@@ -2307,10 +2307,16 @@ function silenceNodes(handles){
     if(progIsPlaying){
       stopPlayback();
     }else{
-      if(toneAvailable && typeof Tone.start === 'function'){ Tone.start(); }
-      progIsPlaying = true;
-      playBtn.textContent = 'Arrêter';
-      schedulePlayback();
+      const startPlayback = function(){
+        progIsPlaying = true;
+        playBtn.textContent = 'Arrêter';
+        schedulePlayback();
+      };
+      if(toneAvailable && typeof Tone.start === 'function'){
+        Tone.start().then(startPlayback).catch(startPlayback);
+      }else{
+        startPlayback();
+      }
     }
   });
 
