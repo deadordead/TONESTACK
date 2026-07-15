@@ -735,8 +735,7 @@
       </div>
       <div class="card sticky-top">
         <h3 id="progName" class="prog-title">Pop</h3>
-        <button class="btn primary" id="progPlay" style="width:100%; margin-bottom:6px;">Jouer la progression</button>
-        <div class="status-line" id="soundEngineStatus" style="text-align:center; margin-bottom:14px;">Vérification du moteur audio…</div>
+        <button class="btn primary" id="progPlay" style="width:100%; margin-bottom:14px;">Jouer la progression</button>
         <div class="prog-settings-row">
           <div class="prog-tempo">
             <label>Tempo</label>
@@ -895,7 +894,6 @@
   <span class="nav-chevron">▲</span>
 </button>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.32/Tone.min.js"></script>
 <script>
 (function(){
 "use strict";
@@ -2022,50 +2020,6 @@ function silenceNodes(handles){
   let BEATS_PER_CHORD = 4;
   let chordVolume = 0.85, rhythmVolume = 0.55;
 
-  // Prefer Tone.js's tested PluckSynth for a more guitar-like tone.
-  // Each pluck gets its own short-lived PluckSynth instance (documented,
-  // standalone usage) rather than wrapping it in PolySynth, since
-  // PolySynth only supports specific "voice" classes and PluckSynth
-  // likely isn't one of them — that mismatch is why the earlier version
-  // silently failed to construct.
-  const soundEngineStatusEl = document.getElementById('soundEngineStatus');
-  const toneAvailable = typeof Tone !== 'undefined' && typeof Tone.PluckSynth === 'function';
-  let activeToneSynths = [];
-
-  if(toneAvailable){
-    soundEngineStatusEl.textContent = 'Son : corde pincée (Tone.js)';
-    soundEngineStatusEl.className = 'status-line ok';
-  }else{
-    soundEngineStatusEl.textContent = 'Son : basique (secours — Tone.js indisponible)';
-    soundEngineStatusEl.className = 'status-line warn';
-  }
-  soundEngineStatusEl.style.textAlign = 'center';
-  soundEngineStatusEl.style.marginBottom = '14px';
-
-  function playToneNote(freq, duration, delay){
-    try{
-      const synth = new Tone.PluckSynth().toDestination();
-      synth.volume.value = chordVolume > 0 ? (20 * Math.log10(chordVolume)) : -60;
-      const t = Tone.now() + delay;
-      synth.triggerAttack(freq, t);
-      activeToneSynths.push(synth);
-      setTimeout(function(){
-        try{ synth.dispose(); }catch(e){}
-        activeToneSynths = activeToneSynths.filter(function(s){ return s!==synth; });
-      }, (delay + duration + 0.5) * 1000);
-      return true;
-    }catch(e){
-      return false;
-    }
-  }
-  function stopAllToneSynths(){
-    activeToneSynths.forEach(function(s){
-      try{ s.triggerRelease(); }catch(e){}
-      try{ s.dispose(); }catch(e){}
-    });
-    activeToneSynths = [];
-  }
-
   chordVolSlider.addEventListener('input', function(){
     chordVolume = parseInt(chordVolSlider.value, 10) / 100;
     chordVolValue.textContent = chordVolSlider.value + '%';
@@ -2164,7 +2118,6 @@ function silenceNodes(handles){
     playBtn.textContent = 'Jouer la progression';
     silenceNodes(activeProgNodes);
     activeProgNodes = [];
-    stopAllToneSynths();
   }
 
   // Schedules exactly one bar (one chord), starting "now". Reading
@@ -2174,26 +2127,13 @@ function silenceNodes(handles){
     const chordDuration = (60 / progBpm) * BEATS_PER_CHORD;
     const registry = [];
     if(ch.variant){
-      if(toneAvailable){
-        ch.variant.frets.forEach(function(f, stringIdx){
-          if(f === -1) return;
-          const freq = midiToFreq(STRING_MIDI[stringIdx] + f);
-          const strumOffset = stringIdx * 0.014;
-          const ok = playToneNote(freq, chordDuration*0.9, strumOffset);
-          if(!ok){
-            const handle = playTone(freq, chordDuration*0.92, strumOffset, 0.16 * chordVolume);
-            if(handle) registry.push(handle);
-          }
-        });
-      }else{
-        ch.variant.frets.forEach(function(f, stringIdx){
-          if(f === -1) return;
-          const freq = midiToFreq(STRING_MIDI[stringIdx] + f);
-          const strumOffset = stringIdx * 0.014;
-          const handle = playTone(freq, chordDuration*0.92, strumOffset, 0.16 * chordVolume);
-          if(handle) registry.push(handle);
-        });
-      }
+      ch.variant.frets.forEach(function(f, stringIdx){
+        if(f === -1) return;
+        const freq = midiToFreq(STRING_MIDI[stringIdx] + f);
+        const strumOffset = stringIdx * 0.014;
+        const handle = playTone(freq, chordDuration*0.92, strumOffset, 0.16 * chordVolume);
+        if(handle) registry.push(handle);
+      });
     }
     if(chosenRhythmStyle !== 'none'){
       playRhythmStyle(chosenRhythmStyle, 0, chordDuration, registry, rhythmVolume);
@@ -2307,16 +2247,9 @@ function silenceNodes(handles){
     if(progIsPlaying){
       stopPlayback();
     }else{
-      const startPlayback = function(){
-        progIsPlaying = true;
-        playBtn.textContent = 'Arrêter';
-        schedulePlayback();
-      };
-      if(toneAvailable && typeof Tone.start === 'function'){
-        Tone.start().then(startPlayback).catch(startPlayback);
-      }else{
-        startPlayback();
-      }
+      progIsPlaying = true;
+      playBtn.textContent = 'Arrêter';
+      schedulePlayback();
     }
   });
 
