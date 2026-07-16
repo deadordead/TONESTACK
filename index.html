@@ -539,6 +539,18 @@
   .idea-trim-controls input[type=range]{width:100%; margin-bottom:10px;}
   .idea-trim-controls input[type=range]:last-child{margin-bottom:0;}
   .idea-trim-reset{margin-top:8px;}
+  .custom-chord-row{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    padding:10px 12px;
+    border:1px solid var(--aluminum);
+    border-radius:4px;
+    background:var(--panel-2);
+    margin-bottom:8px;
+  }
+  .custom-chord-name{font-weight:600; font-size:14px;}
+  .custom-chord-actions{display:flex; align-items:center; gap:6px;}
+  .custom-chord-actions .stepper-btn{width:26px; height:26px; font-size:14px;}
+
   .idea-entry{padding:16px 0; border-bottom:1px solid var(--line);}
   .idea-entry:last-child{border-bottom:none;}
   .idea-delete{margin-top:10px;}
@@ -768,6 +780,7 @@
             <option value="shuffle">Shuffle</option>
             <option value="reggae">Reggae</option>
             <option value="funk">Funk</option>
+            <option value="pompe">Pompe manouche</option>
           </select>
         </div>
         <div class="prog-settings-row">
@@ -802,7 +815,7 @@
           <div class="fretboard-wrap prog-diagram" id="progFocusDiagram"></div>
         </div>
         <div class="prog-suggestion">
-          <div class="prog-suggestion-row">
+          <div class="prog-suggestion-row" id="suggestGlobalRow">
             <div>
               <div class="prog-suggestion-label">Gamme de la tonalité</div>
               <div class="prog-suggestion-value" id="suggestGlobal">Do Majeure</div>
@@ -818,7 +831,12 @@
           </div>
         </div>
       </div>
-      <div class="card">
+      <div class="chip-group" id="progGridMode" style="margin-bottom:16px;">
+        <button class="chip active" data-grid="preset">Préréglages</button>
+        <button class="chip" data-grid="custom">Personnalisée</button>
+      </div>
+
+      <div class="card" id="progPresetControls">
         <div class="stack" style="margin-bottom:14px;">
           <label>Tonalité</label>
           <div class="chip-group" id="progRoots"></div>
@@ -833,6 +851,35 @@
         <div class="stack">
           <label for="progStyles">Style</label>
           <select id="progStyles"></select>
+        </div>
+      </div>
+
+      <div class="card" id="progCustomControls" style="display:none;">
+        <div class="stack" style="margin-bottom:16px;">
+          <label for="progPresetSelect">Grilles sauvegardées</label>
+          <div class="row" style="gap:8px;">
+            <select id="progPresetSelect" style="flex:1;">
+              <option value="">— Aucune —</option>
+            </select>
+            <button class="btn small ghost" id="progPresetSave">Sauvegarder</button>
+            <button class="btn small danger" id="progPresetDelete">Suppr.</button>
+          </div>
+        </div>
+        <div class="stack" style="margin-bottom:14px;">
+          <label>Accords de la grille</label>
+          <div id="customChordList"></div>
+          <button class="btn small ghost" id="customChordAddToggle" style="margin-top:8px;">+ Ajouter un accord</button>
+        </div>
+        <div id="customChordPicker" style="display:none;">
+          <div class="stack" style="margin-bottom:10px;">
+            <label>Fondamentale</label>
+            <div class="chip-group" id="customPickRoots"></div>
+          </div>
+          <div class="stack" style="margin-bottom:10px;">
+            <label>Qualité</label>
+            <div class="chip-group" id="customPickQualities"></div>
+          </div>
+          <button class="btn primary small" id="customPickConfirm">Ajouter à la grille</button>
         </div>
       </div>
     </section>
@@ -2011,6 +2058,19 @@ function silenceNodes(handles){
   const rhythmVolSlider = document.getElementById('progRhythmVolSlider');
   const rhythmVolValue = document.getElementById('progRhythmVolValue');
 
+  const gridModeEl = document.getElementById('progGridMode');
+  const presetControlsEl = document.getElementById('progPresetControls');
+  const customControlsEl = document.getElementById('progCustomControls');
+  const customChordListEl = document.getElementById('customChordList');
+  const customChordAddToggle = document.getElementById('customChordAddToggle');
+  const customChordPicker = document.getElementById('customChordPicker');
+  const customPickRootsEl = document.getElementById('customPickRoots');
+  const customPickQualitiesEl = document.getElementById('customPickQualities');
+  const customPickConfirmBtn = document.getElementById('customPickConfirm');
+  const presetSelectEl = document.getElementById('progPresetSelect');
+  const presetSaveBtn = document.getElementById('progPresetSave');
+  const presetDeleteBtn = document.getElementById('progPresetDelete');
+
   let chosenRoot = 'C', chosenMode = 'major', chosenStyleIdx = 0;
   let chosenRhythmStyle = 'none';
   let progPlayToken = 0, progIsPlaying = false;
@@ -2019,6 +2079,188 @@ function silenceNodes(handles){
   let progVoicingOverride = {}; // { chordIndex: variantIndex } — cleared when mode/style changes
   let BEATS_PER_CHORD = 4;
   let chordVolume = 0.85, rhythmVolume = 0.55;
+  let gridMode = 'preset'; // 'preset' | 'custom'
+  let customChords = []; // [{root, quality}]
+
+  /* ---- Grid mode toggle ---- */
+  gridModeEl.querySelectorAll('.chip').forEach(function(c){
+    c.addEventListener('click', function(){
+      gridModeEl.querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));
+      c.classList.add('active');
+      gridMode = c.dataset.grid;
+      presetControlsEl.style.display = gridMode === 'preset' ? '' : 'none';
+      customControlsEl.style.display = gridMode === 'custom' ? '' : 'none';
+      progVoicingOverride = {};
+      focusIndex = 0;
+      if(progIsPlaying) stopPlayback();
+      refresh();
+    });
+  });
+
+  /* ---- Custom chord picker (root + quality, same pattern as Accords) ---- */
+  let pickerRoot = 'C', pickerQuality = 'maj';
+  NOTES.forEach(function(n){
+    const c = document.createElement('button');
+    c.className = 'chip' + (n===pickerRoot ? ' active' : '');
+    c.textContent = n;
+    c.addEventListener('click', function(){
+      pickerRoot = n;
+      customPickRootsEl.querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));
+      c.classList.add('active');
+    });
+    customPickRootsEl.appendChild(c);
+  });
+  Object.keys(window.ChordEngine.QUALITY_LABEL).forEach(function(q){
+    const c = document.createElement('button');
+    c.className = 'chip' + (q===pickerQuality ? ' active' : '');
+    c.textContent = window.ChordEngine.QUALITY_LABEL[q];
+    c.addEventListener('click', function(){
+      pickerQuality = q;
+      customPickQualitiesEl.querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));
+      c.classList.add('active');
+    });
+    customPickQualitiesEl.appendChild(c);
+  });
+
+  customChordAddToggle.addEventListener('click', function(){
+    const opening = customChordPicker.style.display === 'none';
+    customChordPicker.style.display = opening ? '' : 'none';
+    customChordAddToggle.textContent = opening ? 'Fermer' : '+ Ajouter un accord';
+  });
+
+  customPickConfirmBtn.addEventListener('click', function(){
+    customChords.push({root:pickerRoot, quality:pickerQuality});
+    saveDraft();
+    renderCustomChordList();
+    if(progIsPlaying) stopPlayback();
+    refresh();
+  });
+
+  function renderCustomChordList(){
+    customChordListEl.innerHTML = '';
+    if(customChords.length === 0){
+      customChordListEl.innerHTML = '<div class="empty-state">Aucun accord pour l\'instant.</div>';
+      return;
+    }
+    customChords.forEach(function(c, i){
+      const row = document.createElement('div');
+      row.className = 'custom-chord-row';
+      row.innerHTML =
+        '<span class="custom-chord-name">'+c.root+' '+window.ChordEngine.QUALITY_LABEL[c.quality]+'</span>'+
+        '<span class="custom-chord-actions">'+
+          '<button class="stepper-btn" data-act="up" '+(i===0?'disabled':'')+'>↑</button>'+
+          '<button class="stepper-btn" data-act="down" '+(i===customChords.length-1?'disabled':'')+'>↓</button>'+
+          '<button class="btn danger small" data-act="del">✕</button>'+
+        '</span>';
+      row.querySelector('[data-act="up"]').addEventListener('click', function(){
+        if(i===0) return;
+        const tmp = customChords[i-1]; customChords[i-1] = customChords[i]; customChords[i] = tmp;
+        saveDraft(); renderCustomChordList();
+        if(progIsPlaying) stopPlayback();
+        refresh();
+      });
+      row.querySelector('[data-act="down"]').addEventListener('click', function(){
+        if(i===customChords.length-1) return;
+        const tmp = customChords[i+1]; customChords[i+1] = customChords[i]; customChords[i] = tmp;
+        saveDraft(); renderCustomChordList();
+        if(progIsPlaying) stopPlayback();
+        refresh();
+      });
+      row.querySelector('[data-act="del"]').addEventListener('click', function(){
+        customChords.splice(i,1);
+        saveDraft(); renderCustomChordList();
+        if(progIsPlaying) stopPlayback();
+        refresh();
+      });
+      customChordListEl.appendChild(row);
+    });
+  }
+
+  /* ---- Persistence: last draft auto-saved, plus a small library of named presets ---- */
+  const DRAFT_KEY = 'progression:draft';
+  const PRESET_INDEX_KEY = 'progression:presets:index';
+  const MAX_PRESETS = 6;
+
+  async function saveDraft(){
+    try{ await appStorage.set(DRAFT_KEY, JSON.stringify(customChords)); }catch(e){}
+  }
+  async function loadDraft(){
+    try{
+      const res = await appStorage.get(DRAFT_KEY);
+      customChords = res ? JSON.parse(res.value) : [];
+    }catch(e){ customChords = []; }
+    renderCustomChordList();
+    if(gridMode === 'custom') refresh();
+  }
+
+  async function getPresetIndex(){
+    try{
+      const res = await appStorage.get(PRESET_INDEX_KEY);
+      return res ? JSON.parse(res.value) : [];
+    }catch(e){ return []; }
+  }
+  async function setPresetIndex(ids){
+    try{ await appStorage.set(PRESET_INDEX_KEY, JSON.stringify(ids)); }catch(e){}
+  }
+  async function loadPresetsList(){
+    const ids = await getPresetIndex();
+    presetSelectEl.innerHTML = '<option value="">— Aucune —</option>';
+    for(const id of ids){
+      try{
+        const res = await appStorage.get('progression:preset:'+id);
+        if(!res) continue;
+        const preset = JSON.parse(res.value);
+        const opt = document.createElement('option');
+        opt.value = id;
+        opt.textContent = preset.name;
+        presetSelectEl.appendChild(opt);
+      }catch(e){}
+    }
+  }
+
+  presetSelectEl.addEventListener('change', async function(){
+    const id = presetSelectEl.value;
+    if(!id) return;
+    try{
+      const res = await appStorage.get('progression:preset:'+id);
+      if(!res) return;
+      const preset = JSON.parse(res.value);
+      customChords = preset.chords;
+      progVoicingOverride = {};
+      saveDraft();
+      renderCustomChordList();
+      if(progIsPlaying) stopPlayback();
+      refresh();
+    }catch(e){}
+  });
+
+  presetSaveBtn.addEventListener('click', async function(){
+    if(customChords.length === 0) return;
+    const ids = await getPresetIndex();
+    if(ids.length >= MAX_PRESETS){
+      alert('Maximum de '+MAX_PRESETS+' grilles sauvegardées. Supprime-en une avant d\'en ajouter une nouvelle.');
+      return;
+    }
+    const name = prompt('Nom de cette grille :', 'Grille '+(ids.length+1));
+    if(!name) return;
+    const id = String(Date.now());
+    try{
+      await appStorage.set('progression:preset:'+id, JSON.stringify({name:name, chords:customChords}));
+      ids.push(id);
+      await setPresetIndex(ids);
+      await loadPresetsList();
+      presetSelectEl.value = id;
+    }catch(e){}
+  });
+
+  presetDeleteBtn.addEventListener('click', async function(){
+    const id = presetSelectEl.value;
+    if(!id) return;
+    const ids = await getPresetIndex();
+    await setPresetIndex(ids.filter(function(x){ return x!==id; }));
+    try{ await appStorage.delete('progression:preset:'+id); }catch(e){}
+    await loadPresetsList();
+  });
 
   chordVolSlider.addEventListener('input', function(){
     chordVolume = parseInt(chordVolSlider.value, 10) / 100;
@@ -2086,6 +2328,28 @@ function silenceNodes(handles){
   buildStyleOptions();
 
   function currentChords(){
+    if(gridMode === 'custom'){
+      return customChords.map(function(c, i){
+        const variants = window.ChordEngine.buildChordVariants(c.root, c.quality);
+        let variantIdx = progVoicingOverride[i];
+        if(variantIdx === undefined || variantIdx >= variants.length){
+          variantIdx = variants.findIndex(v=>v.id==='open');
+          if(variantIdx === -1) variantIdx = 0;
+        }
+        // no fixed key for a custom grid: suggest each chord's own scale
+        const isMinorFamily = (c.quality === 'min' || c.quality === 'm7' || c.quality === 'm6');
+        return {
+          roman: '',
+          degree: null,
+          customScaleHint: isMinorFamily ? 'Mineure naturelle' : (c.quality==='7' ? 'Mixolydien' : 'Majeure'),
+          rootIdx: NOTES.indexOf(c.root),
+          chordName: c.root + ' ' + window.ChordEngine.QUALITY_LABEL[c.quality],
+          variants: variants,
+          variantIndex: variantIdx,
+          variant: variants[variantIdx]
+        };
+      });
+    }
     const rootIdx = NOTES.indexOf(chosenRoot);
     const degrees = chosenMode==='major' ? MAJOR_DEGREES : MINOR_DEGREES;
     const preset = PRESETS[chosenMode][chosenStyleIdx];
@@ -2127,16 +2391,35 @@ function silenceNodes(handles){
     const chordDuration = (60 / progBpm) * BEATS_PER_CHORD;
     const registry = [];
     if(ch.variant){
-      ch.variant.frets.forEach(function(f, stringIdx){
-        if(f === -1) return;
-        const freq = midiToFreq(STRING_MIDI[stringIdx] + f);
-        const strumOffset = stringIdx * 0.014;
-        const handle = playTone(freq, chordDuration*0.92, strumOffset, 0.16 * chordVolume);
-        if(handle) registry.push(handle);
-      });
-    }
-    if(chosenRhythmStyle !== 'none'){
-      playRhythmStyle(chosenRhythmStyle, 0, chordDuration, registry, rhythmVolume);
+      if(chosenRhythmStyle === 'pompe'){
+        // "La pompe" manouche: the chord itself is retriggered short and
+        // percussive on every beat instead of held for the whole bar,
+        // with an accent on the off-beats (2 & 4) for the driving swing feel.
+        const beatDur = chordDuration / BEATS_PER_CHORD;
+        const hitDur = beatDur * 0.32;
+        for(let b=0; b<BEATS_PER_CHORD; b++){
+          const accent = (b % 2 === 1);
+          const hitGain = (accent ? 0.40 : 0.26) * chordVolume;
+          ch.variant.frets.forEach(function(f, stringIdx){
+            if(f === -1) return;
+            const freq = midiToFreq(STRING_MIDI[stringIdx] + f);
+            const strumOffset = stringIdx * 0.008;
+            const handle = playTone(freq, hitDur, b*beatDur + strumOffset, hitGain);
+            if(handle) registry.push(handle);
+          });
+        }
+      }else{
+        ch.variant.frets.forEach(function(f, stringIdx){
+          if(f === -1) return;
+          const freq = midiToFreq(STRING_MIDI[stringIdx] + f);
+          const strumOffset = stringIdx * 0.014;
+          const handle = playTone(freq, chordDuration*0.92, strumOffset, 0.32 * chordVolume);
+          if(handle) registry.push(handle);
+        });
+        if(chosenRhythmStyle !== 'none'){
+          playRhythmStyle(chosenRhythmStyle, 0, chordDuration, registry, rhythmVolume);
+        }
+      }
     }
     activeProgNodes = registry;
     return chordDuration;
@@ -2175,19 +2458,31 @@ function silenceNodes(handles){
     posNextBtn.disabled = ch.variantIndex >= variants.length - 1;
 
     // scale/mode suggestions
-    const degreeModes = chosenMode==='major' ? MAJOR_DEGREE_MODES : MINOR_DEGREE_MODES;
-    const globalType = chosenMode==='major' ? 'Majeure' : 'Mineure naturelle';
-    suggestGlobalEl.textContent = chosenRoot + ' ' + globalType;
-    const chordModeType = degreeModes[ch.degree];
-    suggestChordEl.textContent = noteName(ch.rootIdx) + ' ' + chordModeType;
-    suggestGlobalGoBtn.onclick = function(){
-      window.ScaleEngine.selectScale(chosenRoot, globalType);
-      setActiveTab('scales');
-    };
-    suggestChordGoBtn.onclick = function(){
-      window.ScaleEngine.selectScale(noteName(ch.rootIdx), chordModeType);
-      setActiveTab('scales');
-    };
+    const suggestGlobalRowEl = document.getElementById('suggestGlobalRow');
+    if(gridMode === 'custom'){
+      suggestGlobalRowEl.style.display = 'none';
+      const chordModeType = ch.customScaleHint || 'Majeure';
+      suggestChordEl.textContent = noteName(ch.rootIdx) + ' ' + chordModeType;
+      suggestChordGoBtn.onclick = function(){
+        window.ScaleEngine.selectScale(noteName(ch.rootIdx), chordModeType);
+        setActiveTab('scales');
+      };
+    }else{
+      suggestGlobalRowEl.style.display = '';
+      const degreeModes = chosenMode==='major' ? MAJOR_DEGREE_MODES : MINOR_DEGREE_MODES;
+      const globalType = chosenMode==='major' ? 'Majeure' : 'Mineure naturelle';
+      suggestGlobalEl.textContent = chosenRoot + ' ' + globalType;
+      const chordModeType = degreeModes[ch.degree];
+      suggestChordEl.textContent = noteName(ch.rootIdx) + ' ' + chordModeType;
+      suggestGlobalGoBtn.onclick = function(){
+        window.ScaleEngine.selectScale(chosenRoot, globalType);
+        setActiveTab('scales');
+      };
+      suggestChordGoBtn.onclick = function(){
+        window.ScaleEngine.selectScale(noteName(ch.rootIdx), chordModeType);
+        setActiveTab('scales');
+      };
+    }
   }
 
   function stepFocusPosition(dir){
@@ -2234,10 +2529,28 @@ function silenceNodes(handles){
   }
 
   function refresh(){
-    const preset = PRESETS[chosenMode][chosenStyleIdx];
-    nameEl.textContent = preset.name;
+    if(gridMode === 'custom'){
+      nameEl.textContent = 'Grille personnalisée';
+    }else{
+      const preset = PRESETS[chosenMode][chosenStyleIdx];
+      nameEl.textContent = preset.name;
+    }
     const chords = currentChords();
     if(focusIndex >= chords.length) focusIndex = 0;
+    if(chords.length === 0){
+      chartEl.innerHTML = '<div class="empty-state">Ajoute au moins un accord ci-dessous pour commencer.</div>';
+      focusRomanEl.textContent = '';
+      focusNameEl.textContent = '—';
+      focusDiagramEl.innerHTML = '';
+      posLabelEl.textContent = '';
+      posPrevBtn.disabled = true;
+      posNextBtn.disabled = true;
+      document.getElementById('suggestGlobalRow').style.display = 'none';
+      suggestChordEl.textContent = '—';
+      playBtn.disabled = true;
+      return;
+    }
+    playBtn.disabled = false;
     renderChart(chords);
     renderFocus(chords);
     // no stopPlayback() here anymore — root/mode/style now pick up live at the next bar boundary
@@ -2254,6 +2567,13 @@ function silenceNodes(handles){
   });
 
   refresh();
+
+  // appStorage is declared further down the file; defer to next tick so
+  // it's available by the time these actually run.
+  setTimeout(function(){
+    loadDraft();
+    loadPresetsList();
+  }, 0);
 })();
 
 /* ============================================================
