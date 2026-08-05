@@ -1903,9 +1903,9 @@ function silenceNodes(handles){
     const x12 = left + 12*fretGap - fretGap/2;
     svg += '<circle cx="'+(x12-6)+'" cy="'+(top+stringGap*5+14)+'" r="4" fill="#AEBBD6"/>';
     svg += '<circle cx="'+(x12+6)+'" cy="'+(top+stringGap*5+14)+'" r="4" fill="#AEBBD6"/>';
-    // strings (horizontal)
+    // strings (horizontal) — high e at top, low E at bottom, matching standard TAB orientation
     for(let s=0;s<6;s++){
-      const y = top + s*stringGap;
+      const y = top + (5-s)*stringGap;
       svg += '<line x1="'+left+'" y1="'+y+'" x2="'+(left+numFrets*fretGap)+'" y2="'+y+'" stroke="#9B978E" stroke-width="1.3"/>';
     }
     // frets (vertical)
@@ -1917,7 +1917,7 @@ function silenceNodes(handles){
     const dotR = compact ? 8 : 10;
     const labelSize = compact ? 7.5 : 8.5;
     for(let s=0;s<6;s++){
-      const y = top + s*stringGap;
+      const y = top + (5-s)*stringGap;
       for(let f=0; f<=numFrets; f++){
         const note = (OPEN_STRINGS[s] + f) % 12;
         const semis = ((note - rootIdx)%12+12)%12;
