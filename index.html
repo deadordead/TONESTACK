@@ -559,32 +559,18 @@
   .score-line{font-family:var(--font-mono); font-size:13px; color:var(--ink-dim); margin-bottom:14px;}
   .choice-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; margin-top:16px;}
 
-  .fret-row{display:flex; gap:5px; overflow-x:auto; padding:6px 2px 10px;}
-  .fret-cell{
-    flex:none;
-    width:36px; height:44px;
-    border-radius:4px;
-    border:1px solid var(--aluminum);
-    background:var(--panel-2);
-    color:var(--ink-dim);
-    font-family:var(--font-mono);
-    font-size:11px;
-    display:flex; align-items:flex-end; justify-content:center;
-    padding-bottom:4px;
-    position:relative;
+  /* tappable neck overlay (Exercices — Notes sur le manche) */
+  .neck-tap-btn{
+    position:absolute;
+    background:transparent;
+    border:none;
+    border-radius:50%;
     cursor:pointer;
+    padding:0;
   }
-  .fret-cell.open{border-left:3px solid var(--ink);}
-  .fret-cell.marker::after{
-    content:'';
-    position:absolute; top:6px; left:50%; transform:translateX(-50%);
-    width:5px; height:5px; border-radius:50%;
-    background:var(--aluminum);
-  }
-  .fret-cell:disabled{cursor:default;}
-  .fret-cell.marked{background:var(--accent, var(--ink)); border-color:var(--accent, var(--ink)); color:#FAF8F4;}
-  .fret-cell.correct{background:var(--good); border-color:var(--good); color:#FAF8F4;}
-  .fret-cell.wrong{background:var(--bad); border-color:var(--bad); color:#FAF8F4;}
+  .neck-tap-btn:hover{background:rgba(53,87,160,0.12);}
+  .neck-tap-btn:focus-visible{outline:2px solid var(--ink);}
+
   .choice-btn{padding:12px; text-align:center;}
   .choice-btn.correct{border-color:var(--good); color:var(--good);}
   .choice-btn.wrong{border-color:var(--bad); color:var(--bad);}
@@ -602,7 +588,7 @@
     <button class="peg" data-tab="chords"><span class="peg-knob"></span>Accords</button>
     <button class="peg" data-tab="scales"><span class="peg-knob"></span>Gammes</button>
     <button class="peg" data-tab="progressions"><span class="peg-knob"></span>Progressions</button>
-    <button class="peg" data-tab="ear"><span class="peg-knob"></span>Oreille</button>
+    <button class="peg" data-tab="ear"><span class="peg-knob"></span>Exercices</button>
     <button class="peg" data-tab="journal"><span class="peg-knob"></span>Journal</button>
     <div class="nav-footer">
       <label class="wake-toggle" for="wakeLockToggle">
@@ -772,95 +758,6 @@
         <h1 class="stage-title">Progressions</h1>
         <p class="stage-sub">Choisis une tonalité et un style — les progressions sont de vraies trames idiomatiques, pas des accords tirés au hasard.</p>
       </div>
-      <div class="card sticky-top">
-        <h3 id="progName" class="prog-title">Pop</h3>
-        <button class="btn primary" id="progPlay" style="width:100%; margin-bottom:14px;">Jouer la progression</button>
-        <div class="prog-settings-row">
-          <div class="prog-tempo">
-            <label>Tempo</label>
-            <div class="prog-tempo-control">
-              <input type="range" id="progBpmSlider" min="40" max="200" value="90">
-              <span class="prog-bpm-value" id="progBpmValue">90</span>
-            </div>
-          </div>
-          <label class="wake-toggle loop-toggle" for="progLoop">
-            <span class="wake-toggle-title">Boucle</span>
-            <input type="checkbox" id="progLoop">
-            <span class="wake-switch"></span>
-          </label>
-        </div>
-        <div class="stack" style="margin-bottom:16px;">
-          <label for="progRhythmStyle">Rythme</label>
-          <select id="progRhythmStyle">
-            <option value="none">Aucun</option>
-            <option value="simple">Clic</option>
-            <option value="pop">Pop / Rock</option>
-            <option value="ballad">Ballade</option>
-            <option value="shuffle">Shuffle</option>
-            <option value="reggae">Reggae</option>
-            <option value="funk">Funk</option>
-            <option value="pompe">Pompe manouche</option>
-          </select>
-        </div>
-        <button class="btn small ghost" id="progAdvancedToggle" type="button" style="margin-bottom:12px;">Réglages avancés ▾</button>
-        <div id="progAdvancedSettings" style="display:none;">
-          <div class="stack" style="margin-bottom:16px;">
-            <label for="progBeatsSelect">Temps / accord</label>
-            <select id="progBeatsSelect">
-              <option value="1">1</option>
-              <option value="2">2</option>
-              <option value="4" selected>4</option>
-            </select>
-          </div>
-          <div class="prog-settings-row">
-            <div class="prog-tempo">
-              <label>Volume accords</label>
-              <div class="prog-tempo-control">
-                <input type="range" id="progChordVolSlider" min="0" max="100" value="85">
-                <span class="prog-bpm-value" id="progChordVolValue">85%</span>
-              </div>
-            </div>
-            <div class="prog-tempo">
-              <label>Volume rythme</label>
-              <div class="prog-tempo-control">
-                <input type="range" id="progRhythmVolSlider" min="0" max="100" value="55">
-                <span class="prog-bpm-value" id="progRhythmVolValue">55%</span>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="prog-chart" id="progChart"></div>
-        <div class="prog-focus">
-          <div class="chord-title-row">
-            <button class="stepper-btn" id="progPosPrev" type="button" aria-label="Position précédente">‹</button>
-            <div class="chord-title-block">
-              <span class="prog-focus-header">
-                <span class="prog-focus-roman" id="progFocusRoman">I</span>
-                <span class="prog-focus-name" id="progFocusName">C majeur</span>
-              </span>
-              <span class="chord-pos-label" id="progPosLabel">Ouverte</span>
-            </div>
-            <button class="stepper-btn" id="progPosNext" type="button" aria-label="Position suivante">›</button>
-          </div>
-          <div class="fretboard-wrap prog-diagram" id="progFocusDiagram"></div>
-        </div>
-        <div class="prog-suggestion">
-          <div class="prog-suggestion-row" id="suggestGlobalRow">
-            <div>
-              <div class="prog-suggestion-label">Gamme de la tonalité</div>
-              <div class="prog-suggestion-value" id="suggestGlobal">Do Majeure</div>
-            </div>
-            <button class="btn small ghost" id="suggestGlobalGo">Voir sur le manche</button>
-          </div>
-          <div class="prog-suggestion-row">
-            <div>
-              <div class="prog-suggestion-label">Sur cet accord</div>
-              <div class="prog-suggestion-value" id="suggestChord">Do Ionien</div>
-            </div>
-            <button class="btn small ghost" id="suggestChordGo">Voir sur le manche</button>
-          </div>
-        </div>
-      </div>
       <div class="chip-group" id="progGridMode" style="margin-bottom:16px;">
         <button class="chip active" data-grid="preset">Préréglages</button>
         <button class="chip" data-grid="custom">Personnalisée</button>
@@ -912,29 +809,123 @@
           <button class="btn primary small" id="customPickConfirm">Ajouter à la grille</button>
         </div>
       </div>
+
+      <div class="card">
+        <h3>Lecture</h3>
+        <div class="prog-settings-row">
+          <div class="prog-tempo">
+            <label>Tempo</label>
+            <div class="prog-tempo-control">
+              <input type="range" id="progBpmSlider" min="40" max="200" value="90">
+              <span class="prog-bpm-value" id="progBpmValue">90</span>
+            </div>
+          </div>
+          <label class="wake-toggle loop-toggle" for="progLoop">
+            <span class="wake-toggle-title">Boucle</span>
+            <input type="checkbox" id="progLoop">
+            <span class="wake-switch"></span>
+          </label>
+        </div>
+        <div class="stack" style="margin-bottom:16px;">
+          <label for="progRhythmStyle">Rythme</label>
+          <select id="progRhythmStyle">
+            <option value="none">Aucun</option>
+            <option value="simple">Clic</option>
+            <option value="pop">Pop / Rock</option>
+            <option value="ballad">Ballade</option>
+            <option value="shuffle">Shuffle</option>
+            <option value="reggae">Reggae</option>
+            <option value="funk">Funk</option>
+            <option value="pompe">Pompe manouche</option>
+          </select>
+        </div>
+        <button class="btn small ghost" id="progAdvancedToggle" type="button" style="margin-bottom:0;">Réglages avancés ▾</button>
+        <div id="progAdvancedSettings" style="display:none; margin-top:14px;">
+          <div class="stack" style="margin-bottom:16px;">
+            <label for="progBeatsSelect">Temps / accord</label>
+            <select id="progBeatsSelect">
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="4" selected>4</option>
+            </select>
+          </div>
+          <div class="prog-settings-row">
+            <div class="prog-tempo">
+              <label>Volume accords</label>
+              <div class="prog-tempo-control">
+                <input type="range" id="progChordVolSlider" min="0" max="100" value="85">
+                <span class="prog-bpm-value" id="progChordVolValue">85%</span>
+              </div>
+            </div>
+            <div class="prog-tempo">
+              <label>Volume rythme</label>
+              <div class="prog-tempo-control">
+                <input type="range" id="progRhythmVolSlider" min="0" max="100" value="55">
+                <span class="prog-bpm-value" id="progRhythmVolValue">55%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card sticky-top">
+        <h3 id="progName" class="prog-title">Pop</h3>
+        <button class="btn primary" id="progPlay" style="width:100%; margin-bottom:14px;">Jouer la progression</button>
+        <div class="prog-chart" id="progChart"></div>
+        <div class="prog-focus">
+          <div class="chord-title-row">
+            <button class="stepper-btn" id="progPosPrev" type="button" aria-label="Position précédente">‹</button>
+            <div class="chord-title-block">
+              <span class="prog-focus-header">
+                <span class="prog-focus-roman" id="progFocusRoman">I</span>
+                <span class="prog-focus-name" id="progFocusName">C majeur</span>
+              </span>
+              <span class="chord-pos-label" id="progPosLabel">Ouverte</span>
+            </div>
+            <button class="stepper-btn" id="progPosNext" type="button" aria-label="Position suivante">›</button>
+          </div>
+          <div class="fretboard-wrap prog-diagram" id="progFocusDiagram"></div>
+        </div>
+        <div class="prog-suggestion">
+          <div class="prog-suggestion-row" id="suggestGlobalRow">
+            <div>
+              <div class="prog-suggestion-label">Gamme de la tonalité</div>
+              <div class="prog-suggestion-value" id="suggestGlobal">Do Majeure</div>
+            </div>
+            <button class="btn small ghost" id="suggestGlobalGo">Voir sur le manche</button>
+          </div>
+          <div class="prog-suggestion-row">
+            <div>
+              <div class="prog-suggestion-label">Sur cet accord</div>
+              <div class="prog-suggestion-value" id="suggestChord">Do Ionien</div>
+            </div>
+            <button class="btn small ghost" id="suggestChordGo">Voir sur le manche</button>
+          </div>
+        </div>
+      </div>
     </section>
 
     <!-- ===================== EAR TRAINER ===================== -->
     <section class="panel" id="panel-ear">
       <div class="stage-header">
-        <p class="stage-eyebrow">06 / Oreille</p>
+        <p class="stage-eyebrow">06 / Exercices</p>
         <h1 class="stage-title" id="earTitle">Reconnaissance d'intervalles</h1>
         <p class="stage-sub" id="earSub">Deux notes sont jouées l'une après l'autre. Identifie l'intervalle qui les sépare.</p>
       </div>
       <div class="card">
         <div class="chip-group" id="earMode" style="margin-bottom:16px;">
           <button class="chip active" data-mode="intervals">Intervalles</button>
-          <button class="chip" data-mode="chords">Couleur d'accord</button>
-          <button class="chip" data-mode="seventh">Repérer la 7e</button>
-          <button class="chip" data-mode="fretboard">Repérage manche</button>
+          <button class="chip" data-mode="chords">Type d'accord</button>
+          <button class="chip" data-mode="seventh">7e majeure ou mineure</button>
+          <button class="chip" data-mode="fretboard">Notes sur le manche</button>
         </div>
         <div class="chip-group" id="earFretVariant" style="margin-bottom:16px; display:none;">
-          <button class="chip active" data-variant="hear">J'entends → je pose</button>
-          <button class="chip" data-variant="see">Je vois → je nomme</button>
+          <button class="chip active" data-variant="hear">Écoute et place</button>
+          <button class="chip" data-variant="see">Regarde et nomme</button>
         </div>
         <div class="score-line" id="earScore">Score de la session : 0 / 0</div>
         <div id="earFretInfo" class="status-line" style="display:none; margin-bottom:10px;"></div>
-        <div id="earFretRowWrap" style="display:none; margin-bottom:14px;"></div>
+        <div id="earNeckWrap" class="fretboard-wrap" style="display:none; margin-bottom:14px; position:relative;"></div>
         <div class="row" style="justify-content:center; gap:10px;">
           <button class="btn primary" id="earPlay">Jouer les deux notes</button>
           <button class="btn ghost" id="earNext">Nouvelle question</button>
@@ -992,7 +983,7 @@ function noteName(i){ return NOTES[((i%12)+12)%12]; }
 /* ============ TAB NAVIGATION ============ */
 const TAB_LABELS = {
   tuner:'Accordeur', metronome:'Métronome', chords:'Accords', scales:'Gammes',
-  progressions:'Progressions', ear:'Oreille', journal:'Journal'
+  progressions:'Progressions', ear:'Exercices', journal:'Journal'
 };
 const TAB_ACCENTS = {
   tuner:'#3557A0', metronome:'#C0402C', chords:'#4C7A52', scales:'#C99A2E',
@@ -2642,13 +2633,12 @@ function silenceNodes(handles){
   const modeEl = document.getElementById('earMode');
   const fretVariantEl = document.getElementById('earFretVariant');
   const fretInfoEl = document.getElementById('earFretInfo');
-  const fretRowWrapEl = document.getElementById('earFretRowWrap');
+  const neckWrapEl = document.getElementById('earNeckWrap');
   const playBtn = document.getElementById('earPlay');
   const nextBtn = document.getElementById('earNext');
   const scoreEl = document.getElementById('earScore');
   const choicesEl = document.getElementById('earChoices');
 
-  const STANDARD_STRING_NAMES = ['Mi grave (6e corde)','La (5e corde)','Ré (4e corde)','Sol (3e corde)','Si (2e corde)','Mi aigu (1re corde)'];
   const FRETBOARD_SCORE = {correct:0, total:0};
   let fretboardVariant = 'hear';
   let fretTarget = {string:0, fret:0};
@@ -2740,7 +2730,8 @@ function silenceNodes(handles){
       }else{
         fretVariantEl.style.display = 'none';
         fretInfoEl.style.display = 'none';
-        fretRowWrapEl.style.display = 'none';
+        neckWrapEl.style.display = 'none';
+        neckWrapEl.innerHTML = '';
         choicesEl.style.display = '';
         playBtn.style.display = '';
         const m = MODES[currentMode];
@@ -2770,39 +2761,97 @@ function silenceNodes(handles){
     scoreEl.textContent = 'Score de la session : '+FRETBOARD_SCORE.correct+' / '+FRETBOARD_SCORE.total;
   }
 
-  function renderFretRow(mode){
-    fretRowWrapEl.innerHTML = '';
-    const wrap = document.createElement('div');
-    wrap.className = 'fret-row';
-    for(let f=0; f<=12; f++){
-      const btn = document.createElement('button');
-      btn.className = 'fret-cell' + (f===0?' open':'') + ([3,5,7,9,12].indexOf(f)!==-1?' marker':'');
-      btn.textContent = f;
-      if(mode === 'mark' && f === fretTarget.fret){
-        btn.classList.add('marked');
-      }
-      if(mode === 'tap'){
-        btn.addEventListener('click', function(){ onFretTap(f, btn); });
-      }else{
-        btn.disabled = true;
-      }
-      wrap.appendChild(btn);
+  function neckDims(){
+    const compact = window.innerWidth < 480;
+    const left=compact?34:46, top=24, stringGap=compact?24:30, fretGap=compact?36:52, right=compact?14:20;
+    const numFrets = 12;
+    const W = left + numFrets*fretGap + right, H = top + stringGap*5 + 24;
+    return {compact, left, top, stringGap, fretGap, right, numFrets, W, H};
+  }
+  function neckX(d, fret){ return fret===0 ? d.left-14 : d.left + fret*d.fretGap - d.fretGap/2; }
+  function neckY(d, stringIdx){ return d.top + (5-stringIdx)*d.stringGap; } // high e top, low E bottom
+
+  function buildNeckBaseSVG(d){
+    let svg = '<svg viewBox="0 0 '+d.W+' '+d.H+'" width="'+Math.min(d.W,760)+'" style="display:block;">';
+    [3,5,7,9].forEach(function(f){
+      const x = d.left + f*d.fretGap - d.fretGap/2;
+      svg += '<circle cx="'+x+'" cy="'+(d.top+d.stringGap*5+14)+'" r="4" fill="#AEBBD6"/>';
+    });
+    const x12 = d.left + 12*d.fretGap - d.fretGap/2;
+    svg += '<circle cx="'+(x12-6)+'" cy="'+(d.top+d.stringGap*5+14)+'" r="4" fill="#AEBBD6"/>';
+    svg += '<circle cx="'+(x12+6)+'" cy="'+(d.top+d.stringGap*5+14)+'" r="4" fill="#AEBBD6"/>';
+    for(let s=0;s<6;s++){
+      const y = d.top + (5-s)*d.stringGap;
+      svg += '<line x1="'+d.left+'" y1="'+y+'" x2="'+(d.left+d.numFrets*d.fretGap)+'" y2="'+y+'" stroke="#9B978E" stroke-width="1.3"/>';
     }
-    fretRowWrapEl.appendChild(wrap);
+    for(let f=0; f<=d.numFrets; f++){
+      const x = d.left + f*d.fretGap;
+      svg += '<line x1="'+x+'" y1="'+d.top+'" x2="'+x+'" y2="'+(d.top+d.stringGap*5)+'" stroke="#9B978E" stroke-width="'+(f===0?4:1)+'"/>';
+    }
+    return svg;
   }
 
-  function onFretTap(f, btn){
+  function renderNeckMarkers(markers){
+    const d = neckDims();
+    let svg = buildNeckBaseSVG(d);
+    markers.forEach(function(m){
+      const x = neckX(d, m.fret), y = neckY(d, m.string);
+      const r = d.compact ? 9 : 11;
+      svg += '<circle cx="'+x+'" cy="'+y+'" r="'+r+'" fill="'+m.color+'"/>';
+    });
+    svg += '</svg>';
+    neckWrapEl.style.position = 'relative';
+    neckWrapEl.innerHTML = svg;
+  }
+
+  function renderNeckTappable(onTap){
+    const d = neckDims();
+    const svg = buildNeckBaseSVG(d) + '</svg>';
+    neckWrapEl.style.position = 'relative';
+    neckWrapEl.innerHTML = svg;
+    const scale = Math.min(d.W,760) / d.W;
+    const hitSize = d.compact ? 22 : 26;
+    for(let s=0; s<6; s++){
+      for(let f=0; f<=d.numFrets; f++){
+        const cx = neckX(d, f) * scale;
+        const cy = neckY(d, s) * scale;
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'neck-tap-btn';
+        btn.style.width = hitSize+'px';
+        btn.style.height = hitSize+'px';
+        btn.style.left = cx+'px';
+        btn.style.top = cy+'px';
+        btn.style.transform = 'translate(-50%,-50%)';
+        btn.setAttribute('aria-label', 'corde '+(s+1)+' case '+f);
+        btn.addEventListener('click', function(){ onTap(s, f); });
+        neckWrapEl.appendChild(btn);
+      }
+    }
+  }
+
+  function onNeckTap(s, f){
     if(fretAnswered) return;
     fretAnswered = true;
     FRETBOARD_SCORE.total++;
-    if(f === fretTarget.fret){
+    const correct = (OPEN_STRINGS[s] + f) % 12 === fretTarget.note;
+    const markers = [];
+    if(correct){
       FRETBOARD_SCORE.correct++;
-      btn.classList.add('correct');
+      markers.push({string:s, fret:f, color:'#4C7A52'});
     }else{
-      btn.classList.add('wrong');
-      const cells = fretRowWrapEl.querySelectorAll('.fret-cell');
-      cells[fretTarget.fret].classList.add('correct');
+      markers.push({string:s, fret:f, color:'#C0402C'});
+      outer:
+      for(let ss=0; ss<6; ss++){
+        for(let ff=0; ff<=12; ff++){
+          if((OPEN_STRINGS[ss]+ff)%12 === fretTarget.note){
+            markers.push({string:ss, fret:ff, color:'#4C7A52'});
+            break outer;
+          }
+        }
+      }
     }
+    renderNeckMarkers(markers);
     updateFretScore();
   }
 
@@ -2834,25 +2883,23 @@ function silenceNodes(handles){
 
   function newFretQuestion(){
     fretAnswered = false;
-    fretTarget = {
-      string: Math.floor(Math.random()*6),
-      fret: Math.floor(Math.random()*13)
-    };
-    fretInfoEl.style.display = '';
-    fretInfoEl.textContent = 'Corde : ' + STANDARD_STRING_NAMES[fretTarget.string];
-    fretRowWrapEl.style.display = '';
+    fretInfoEl.style.display = 'none';
+    neckWrapEl.style.display = '';
+    neckWrapEl.innerHTML = '';
     if(fretboardVariant === 'hear'){
-      subEl.textContent = "Une note est jouée sur la corde indiquée. Trouve la bonne case.";
+      fretTarget = {note: Math.floor(Math.random()*12)};
+      subEl.textContent = "Une note est jouée. Tape n'importe où sur le manche où elle se trouve.";
       playBtn.textContent = 'Jouer la note';
       playBtn.style.display = '';
       choicesEl.style.display = 'none';
       choicesEl.innerHTML = '';
-      renderFretRow('tap');
+      renderNeckTappable(onNeckTap);
     }else{
-      subEl.textContent = "La case marquée sonne cette note. Laquelle est-ce ?";
+      fretTarget = {string: Math.floor(Math.random()*6), fret: Math.floor(Math.random()*13)};
+      subEl.textContent = "Quelle note sonne à cet endroit ?";
       playBtn.style.display = 'none';
       choicesEl.style.display = '';
-      renderFretRow('mark');
+      renderNeckMarkers([{string:fretTarget.string, fret:fretTarget.fret, color:'#3D6B7A'}]);
       buildNoteChoices();
     }
   }
@@ -2888,7 +2935,7 @@ function silenceNodes(handles){
   playBtn.addEventListener('click', function(){
     if(currentMode === 'fretboard'){
       if(fretboardVariant === 'hear'){
-        playTone(midiToFreq(STRING_MIDI[fretTarget.string] + fretTarget.fret), 1.2, 0, 0.22);
+        playTone(midiToFreq(60 + fretTarget.note), 1.2, 0, 0.22);
       }
     }else{
       MODES[currentMode].play();
