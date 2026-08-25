@@ -535,12 +535,36 @@
   .idea-loop-toggle{width:auto; gap:7px;}
   .idea-loop-toggle .wake-toggle-title{font-size:12px;}
   .idea-trim-toggle{margin-top:10px;}
-  .idea-trim-controls{margin-top:10px; padding:12px; background:var(--panel-2); border-radius:4px; display:none;}
+  .idea-trim-controls{margin-top:10px; padding:14px; background:var(--panel-2); border-radius:4px; display:none;}
   .idea-trim-controls.open{display:block;}
-  .idea-trim-controls label{display:flex; justify-content:space-between; margin-bottom:4px;}
-  .idea-trim-controls input[type=range]{width:100%; margin-bottom:10px;}
-  .idea-trim-controls input[type=range]:last-child{margin-bottom:0;}
-  .idea-trim-reset{margin-top:8px;}
+  .idea-trim-reset{margin-top:2px;}
+  .trim-bar-track{
+    position:relative;
+    height:10px;
+    border-radius:5px;
+    background:var(--paper);
+    border:1px solid var(--aluminum);
+    margin-bottom:8px;
+    overflow:hidden;
+  }
+  .trim-bar-selected{
+    position:absolute; top:0; bottom:0;
+    background:var(--accent-journal);
+    opacity:0.55;
+  }
+  .trim-live-time{
+    font-family:var(--font-mono); font-size:11px; color:var(--ink-dim);
+    text-align:center; margin-bottom:14px;
+  }
+  .trim-mark-row{display:flex; gap:16px; flex-wrap:wrap; margin-bottom:12px;}
+  .trim-mark-group{flex:1 1 140px; min-width:140px;}
+  .trim-mark-label{
+    display:block; font-family:var(--font-mono); font-size:11px; color:var(--ink-dim);
+    margin-bottom:6px;
+  }
+  .trim-mark-btns{display:flex; align-items:center; gap:6px;}
+  .trim-mark-btns .stepper-btn{width:26px; height:26px; font-size:14px; flex:none;}
+  .trim-mark-btns .btn{flex:1; padding:6px 8px; font-size:12px;}
   .custom-chord-row{
     display:flex; align-items:center; justify-content:space-between; gap:10px;
     padding:10px 12px;
@@ -3152,10 +3176,27 @@ function buildIdeaCard(idea, mode){
   const trimControls = document.createElement('div');
   trimControls.className = 'idea-trim-controls';
   trimControls.innerHTML =
-    '<label>Début <span class="trim-start-val">'+formatIdeaTime(idea.trimStart||0)+'</span></label>'+
-    '<input type="range" class="trim-start-range" min="0" max="'+dur+'" step="0.1" value="'+(idea.trimStart||0)+'">'+
-    '<label>Fin <span class="trim-end-val">'+formatIdeaTime(idea.trimEnd||dur)+'</span></label>'+
-    '<input type="range" class="trim-end-range" min="0" max="'+dur+'" step="0.1" value="'+(idea.trimEnd||dur)+'">'+
+    '<div class="trim-bar-track"><div class="trim-bar-selected"></div></div>'+
+    '<div class="trim-live-time">0:00 / '+formatIdeaTime(dur)+'</div>'+
+    '<div class="trim-mark-row">'+
+      '<div class="trim-mark-group">'+
+        '<span class="trim-mark-label">Début : <span class="trim-start-val">'+formatIdeaTime(idea.trimStart||0)+'</span></span>'+
+        '<div class="trim-mark-btns">'+
+          '<button class="stepper-btn trim-start-minus" type="button">−</button>'+
+          '<button class="btn small ghost trim-mark-start" type="button">Marquer ici</button>'+
+          '<button class="stepper-btn trim-start-plus" type="button">+</button>'+
+        '</div>'+
+      '</div>'+
+      '<div class="trim-mark-group">'+
+        '<span class="trim-mark-label">Fin : <span class="trim-end-val">'+formatIdeaTime(idea.trimEnd||dur)+'</span></span>'+
+        '<div class="trim-mark-btns">'+
+          '<button class="stepper-btn trim-end-minus" type="button">−</button>'+
+          '<button class="btn small ghost trim-mark-end" type="button">Marquer ici</button>'+
+          '<button class="stepper-btn trim-end-plus" type="button">+</button>'+
+        '</div>'+
+      '</div>'+
+    '</div>'+
+    '<div class="status-line" style="margin-bottom:10px;">Écoute (▶ ci-dessus), et tape "Marquer ici" au bon moment.</div>'+
     '<button class="btn small ghost idea-trim-reset" type="button">Retirer le rognage</button>';
   wrap.appendChild(trimControls);
 
@@ -3163,8 +3204,8 @@ function buildIdeaCard(idea, mode){
     trimControls.classList.toggle('open');
   });
 
-  const trimStartRange = trimControls.querySelector('.trim-start-range');
-  const trimEndRange = trimControls.querySelector('.trim-end-range');
+  const trimBarSelected = trimControls.querySelector('.trim-bar-selected');
+  const trimLiveTime = trimControls.querySelector('.trim-live-time');
   const trimStartVal = trimControls.querySelector('.trim-start-val');
   const trimEndVal = trimControls.querySelector('.trim-end-val');
   const trimResetBtn = trimControls.querySelector('.idea-trim-reset');
@@ -3172,35 +3213,60 @@ function buildIdeaCard(idea, mode){
   function persistIfSaved(){
     if(mode === 'saved'){
       idea.title = titleInput.value.trim();
-      idea.trimStart = parseFloat(trimStartRange.value);
-      idea.trimEnd = parseFloat(trimEndRange.value);
       setIdea(idea);
     }
   }
 
-  trimStartRange.addEventListener('input', function(){
-    let v = parseFloat(trimStartRange.value);
-    const endV = parseFloat(trimEndRange.value);
-    if(v >= endV) v = Math.max(0, endV - 0.1);
-    idea.trimStart = v;
-    trimStartVal.textContent = formatIdeaTime(v);
-  });
-  trimStartRange.addEventListener('change', persistIfSaved);
+  function updateTrimBar(){
+    const start = idea.trimStart || 0;
+    const end = idea.trimEnd || dur;
+    const leftPct = (start/dur)*100;
+    const widthPct = Math.max(0, ((end-start)/dur)*100);
+    trimBarSelected.style.left = leftPct+'%';
+    trimBarSelected.style.width = widthPct+'%';
+    trimStartVal.textContent = formatIdeaTime(start);
+    trimEndVal.textContent = formatIdeaTime(end);
+  }
+  updateTrimBar();
 
-  trimEndRange.addEventListener('input', function(){
-    let v = parseFloat(trimEndRange.value);
-    const startV = parseFloat(trimStartRange.value);
-    if(v <= startV) v = Math.min(dur, startV + 0.1);
-    idea.trimEnd = v;
-    trimEndVal.textContent = formatIdeaTime(v);
+  trimControls.querySelector('.trim-mark-start').addEventListener('click', function(){
+    let v = audio.currentTime;
+    const end = idea.trimEnd || dur;
+    if(v >= end) v = Math.max(0, end - 0.2);
+    idea.trimStart = v;
+    updateTrimBar();
+    persistIfSaved();
   });
-  trimEndRange.addEventListener('change', persistIfSaved);
+  trimControls.querySelector('.trim-mark-end').addEventListener('click', function(){
+    let v = audio.currentTime;
+    const start = idea.trimStart || 0;
+    if(v <= start) v = Math.min(dur, start + 0.2);
+    idea.trimEnd = v;
+    updateTrimBar();
+    persistIfSaved();
+  });
+  trimControls.querySelector('.trim-start-minus').addEventListener('click', function(){
+    idea.trimStart = Math.max(0, (idea.trimStart||0) - 0.5);
+    updateTrimBar(); persistIfSaved();
+  });
+  trimControls.querySelector('.trim-start-plus').addEventListener('click', function(){
+    const end = idea.trimEnd || dur;
+    idea.trimStart = Math.min(end - 0.1, (idea.trimStart||0) + 0.5);
+    updateTrimBar(); persistIfSaved();
+  });
+  trimControls.querySelector('.trim-end-minus').addEventListener('click', function(){
+    const start = idea.trimStart || 0;
+    idea.trimEnd = Math.max(start + 0.1, (idea.trimEnd||dur) - 0.5);
+    updateTrimBar(); persistIfSaved();
+  });
+  trimControls.querySelector('.trim-end-plus').addEventListener('click', function(){
+    idea.trimEnd = Math.min(dur, (idea.trimEnd||dur) + 0.5);
+    updateTrimBar(); persistIfSaved();
+  });
 
   trimResetBtn.addEventListener('click', function(){
     idea.trimStart = 0; idea.trimEnd = idea.duration;
-    trimStartRange.value = 0; trimEndRange.value = idea.duration;
-    trimStartVal.textContent = formatIdeaTime(0);
-    trimEndVal.textContent = formatIdeaTime(idea.duration);
+    updateTrimBar();
     persistIfSaved();
   });
 
@@ -3209,6 +3275,7 @@ function buildIdeaCard(idea, mode){
   loopCheckbox.addEventListener('change', function(){ looping = loopCheckbox.checked; });
 
   audio.addEventListener('timeupdate', function(){
+    trimLiveTime.textContent = formatIdeaTime(audio.currentTime) + ' / ' + formatIdeaTime(dur);
     const end = idea.trimEnd || audio.duration || dur;
     if(audio.currentTime >= end - 0.02){
       if(looping){
@@ -3255,8 +3322,6 @@ function buildIdeaCard(idea, mode){
 
     saveBtn.addEventListener('click', async function(){
       idea.title = titleInput.value.trim();
-      idea.trimStart = parseFloat(trimStartRange.value);
-      idea.trimEnd = parseFloat(trimEndRange.value);
       await setIdea(idea);
       const ids = await getIdeasIndex();
       ids.unshift(idea.id);
